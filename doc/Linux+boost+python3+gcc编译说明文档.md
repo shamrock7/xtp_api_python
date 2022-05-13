@@ -28,8 +28,8 @@ b. `./bootstrap.sh --with-python=/usr/local/python3`
 c. `./b2 --toolset=gcc-4.8.5  --with-python include="/usr/local/python3/include/python3.6m/" --with-thread --with-date_time  --with-chrono`
 
    （说明：`--with-python` 里面的python需要是python3版本，通过include参数指定自定义版本的python包含路径）
-
-在boost目录下会生成stage文件夹，里面的lib就是C++所需的python3的lib文件。至此boost.python3库编译完成。
+d. `./b2 --prefix=/usr/local/apps/boost install`, 之后会生成`/usr/local/apps/boost/include`和`/usr/local/apps/boost/lib`,里面的lib就是C++所需的python3的lib文件。至此boost.python3库编译完成。
+e. 然后在`source/xtp_python3_2.2.30.7/CMakeLists.txt`中设置`find_package(Boost 1.79.0 COMPONENTS python310 thread date_time system chrono REQUIRED)`
 
 ![finished1.png](./finished1.png)
 
