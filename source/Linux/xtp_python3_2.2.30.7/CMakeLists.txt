@@ -58,8 +58,9 @@ if (WIN32)
 	link_directories(D:/xtpIDE/Python/Python36-32/libs)
 	include_directories(${PYTHON_INCLUDE_PATH})
 elseif(UNIX)
-	set(PYTHON_LIBRARY /usr/local/python3/lib/)
-	set(PYTHON_INCLUDE_PATH /usr/local/python3/include/python3.6m/)
+    # 如果python不是默认安装，请设置python lib 和python include
+    set(PYTHON_LIBRARY /usr/local/apps/python/lib/)
+    set(PYTHON_INCLUDE_PATH /usr/local/apps/python/include/python3.10/)
 	
 	include_directories(${PYTHON_INCLUDE_PATH})
 endif()
@@ -73,7 +74,8 @@ if (WIN32)
 	include_directories(${BOOST_ROOT})
 elseif(UNIX)
 	set(Boost_USE_MULTITHREADED      ON)
-	set(BOOST_ROOT   /home/likunliang/boost_1_66_0_python3/)
+	# 设置boost安装路径
+	set(BOOST_ROOT   /usr/local/apps/boost/)
     find_package(Boost 1.79.0 COMPONENTS python310 thread date_time system chrono REQUIRED) # 如果boost库没有完全编译，需要将编译的库明确地指出，否者message(${Boost_LIBRARIES})会出错
 	if(Boost_FOUND)
 		include_directories(${Boost_INCLUDE_DIRS})
