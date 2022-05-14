@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.23.1)
 project(vn_xtp_api)
 
 # 设置使用的编译器
@@ -59,8 +59,8 @@ if (WIN32)
 	include_directories(${PYTHON_INCLUDE_PATH})
 elseif(UNIX)
     # 如果python不是默认安装，请设置python lib 和python include
-    set(PYTHON_LIBRARY /usr/local/apps/python/lib/)
-    set(PYTHON_INCLUDE_PATH /usr/local/apps/python/include/python3.10/)
+    set(PYTHON_LIBRARY /usr/local/apps/homebrew/Cellar/python@3.9/3.9.6/Frameworks/Python.framework/Versions/3.9/lib)
+    set(PYTHON_INCLUDE_PATH /usr/local/apps/homebrew/Cellar/python@3.9/3.9.6/Frameworks/Python.framework/Versions/3.9/include)
 
 	include_directories(${PYTHON_INCLUDE_PATH})
 endif()
@@ -75,8 +75,8 @@ if (WIN32)
 elseif(UNIX)
 	set(Boost_USE_MULTITHREADED      ON)
 	# 设置boost安装路径
-	set(BOOST_ROOT   /usr/local/apps/boost/)
-    find_package(Boost 1.79.0 COMPONENTS python310 thread date_time system chrono REQUIRED) # 如果boost库没有完全编译，需要将编译的库明确地指出，否者message(${Boost_LIBRARIES})会出错
+	set(BOOST_ROOT /usr/local/apps/homebrew/Cellar/boost/1.76.0)
+    find_package(Boost 1.76.0 COMPONENTS python3 thread date_time system chrono REQUIRED) # 如果boost库没有完全编译，需要将编译的库明确地指出，否者message(${Boost_LIBRARIES})会出错
 	if(Boost_FOUND)
 		include_directories(${Boost_INCLUDE_DIRS})
 	endif()
