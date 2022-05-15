@@ -1,10 +1,10 @@
-cmake_minimum_required(VERSION 3.23.1)
+cmake_minimum_required(VERSION 3.20)
 project(vn_xtp_api)
 
 # 设置使用的编译器
 set(CMAKE_BUILD_TYPE "Release")
 if (CMAKE_COMPILER_IS_GNUC OR CMAKE_COMPILER_IS_GNUCXX) 
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -std=c++23")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -std=c++17")
 endif ()
 
 # 设置输出目录
