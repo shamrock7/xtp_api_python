@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set -e
-BUILDDIR=build
+BUILDDIR=cmake-build-debug
 rm -rf $BUILDDIR
 if [ ! -f $BUILDDIR ]; then
     mkdir -p $BUILDDIR
