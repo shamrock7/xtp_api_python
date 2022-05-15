@@ -1,9 +1,9 @@
-//ËµÃ÷²¿·Ö
+//è¯´æ˜éƒ¨åˆ†
 
 //API
 #include "xtp_quote_api.h"
 
-//ÏµÍ³
+//ç³»ç»Ÿ
 //#ifdef WIN32
 //#include "stdafx.h"
 //#endif
@@ -13,23 +13,24 @@
 
 //Boost
 #define BOOST_PYTHON_STATIC_LIB
-#include <boost/python/module.hpp>	//python·â×°
-#include <boost/python/def.hpp>		//python·â×°
-#include <boost/python/dict.hpp>	//python·â×°
-#include <boost/python/list.hpp>	//python·â×°
-#include <boost/python/object.hpp>	//python·â×°
-#include <boost/python.hpp>			//python·â×°
-#include <boost/thread.hpp>			//ÈÎÎñ¶ÓÁĞµÄÏß³Ì¹¦ÄÜ
-#include <boost/bind.hpp>			//ÈÎÎñ¶ÓÁĞµÄÏß³Ì¹¦ÄÜ
+
+#include <boost/python/module.hpp>    //pythonå°è£…
+#include <boost/python/def.hpp>        //pythonå°è£…
+#include <boost/python/dict.hpp>    //pythonå°è£…
+#include <boost/python/list.hpp>    //pythonå°è£…
+#include <boost/python/object.hpp>    //pythonå°è£…
+#include <boost/python.hpp>            //pythonå°è£…
+#include <boost/thread.hpp>            //ä»»åŠ¡é˜Ÿåˆ—çš„çº¿ç¨‹åŠŸèƒ½
+#include <boost/bind.hpp>            //ä»»åŠ¡é˜Ÿåˆ—çš„çº¿ç¨‹åŠŸèƒ½
 
 
-//ÃüÃû¿Õ¼ä
+//å‘½åç©ºé—´
 using namespace std;
 using namespace boost::python;
 using namespace boost;
 
 
-//³£Á¿
+//å¸¸é‡
 #define ONDISCONNECTED 1
 #define ONERROR 2
 #define ONSUBMARKETDATA 3
@@ -58,490 +59,481 @@ using namespace boost;
 #define ONUNSUBSCRIBEALLOPTIONTICKBYTICK 25
 #define ONQUERYALLTICKERSFULLINFO 26
 ///-------------------------------------------------------------------------------------
-///APIÖĞµÄ²¿·Ö×é¼ş
+///APIä¸­çš„éƒ¨åˆ†ç»„ä»¶
 ///-------------------------------------------------------------------------------------
 
-//GILÈ«¾ÖËø¼ò»¯»ñÈ¡ÓÃ£¬
-//ÓÃÓÚ°ïÖúC++Ïß³Ì»ñµÃGILËø£¬´Ó¶ø·ÀÖ¹python±ÀÀ£
-class PyLock
-{
+//GILå…¨å±€é”ç®€åŒ–è·å–ç”¨ï¼Œ
+//ç”¨äºå¸®åŠ©C++çº¿ç¨‹è·å¾—GILé”ï¼Œä»è€Œé˜²æ­¢pythonå´©æºƒ
+class PyLock {
 private:
-	PyGILState_STATE gil_state;
+    PyGILState_STATE gil_state;
 
 public:
-	//ÔÚÄ³¸öº¯Êı·½·¨ÖĞ´´½¨¸Ã¶ÔÏóÊ±£¬»ñµÃGILËø
-	PyLock()
-	{
-		gil_state = PyGILState_Ensure();
-	}
+    //åœ¨æŸä¸ªå‡½æ•°æ–¹æ³•ä¸­åˆ›å»ºè¯¥å¯¹è±¡æ—¶ï¼Œè·å¾—GILé”
+    PyLock() {
+        gil_state = PyGILState_Ensure();
+    }
 
-	//ÔÚÄ³¸öº¯ÊıÍê³ÉºóÏú»Ù¸Ã¶ÔÏóÊ±£¬½â·ÅGILËø
-	~PyLock()
-	{
-		PyGILState_Release(gil_state);
-	}
+    //åœ¨æŸä¸ªå‡½æ•°å®Œæˆåé”€æ¯è¯¥å¯¹è±¡æ—¶ï¼Œè§£æ”¾GILé”
+    ~PyLock() {
+        PyGILState_Release(gil_state);
+    }
 };
 
 
-//ÈÎÎñ½á¹¹Ìå
-struct Task
-{
-	int task_name;		//»Øµ÷º¯ÊıÃû³Æ¶ÔÓ¦µÄ³£Á¿
-	void *task_data;	//Êı¾İ½á¹¹Ìå
-	void *task_error;	//´íÎó½á¹¹Ìå
-	int task_id;		//ÇëÇóid
-	bool task_last;		//ÊÇ·ñÎª×îºó·µ»Ø
-	int exchange_id;    //½»Ò×ÊĞ³¡
-	void *task_data_one;	//Êı¾İ½á¹¹Ìå
-	int task_one_counts;
-	int task_one_all_counts;
-	void *task_data_two;	//Êı¾İ½á¹¹Ìå
-	int task_two_counts;
-	int task_two_all_counts;
+//ä»»åŠ¡ç»“æ„ä½“
+struct Task {
+    int task_name;        //å›è°ƒå‡½æ•°åç§°å¯¹åº”çš„å¸¸é‡
+    void *task_data;    //æ•°æ®ç»“æ„ä½“
+    void *task_error;    //é”™è¯¯ç»“æ„ä½“
+    int task_id;        //è¯·æ±‚id
+    bool task_last;        //æ˜¯å¦ä¸ºæœ€åè¿”å›
+    int exchange_id;    //äº¤æ˜“å¸‚åœº
+    void *task_data_one;    //æ•°æ®ç»“æ„ä½“
+    int task_one_counts;
+    int task_one_all_counts;
+    void *task_data_two;    //æ•°æ®ç»“æ„ä½“
+    int task_two_counts;
+    int task_two_all_counts;
 
 };
 
 
-///Ïß³Ì°²È«µÄ¶ÓÁĞ
+///çº¿ç¨‹å®‰å…¨çš„é˜Ÿåˆ—
 template<typename Data>
 
-class ConcurrentQueue
-{
+class ConcurrentQueue {
 private:
-	queue<Data> the_queue;								//±ê×¼¿â¶ÓÁĞ
-	mutable mutex the_mutex;							//boost»¥³âËø
-	condition_variable the_condition_variable;			//boostÌõ¼ş±äÁ¿
+    queue<Data> the_queue;                                //æ ‡å‡†åº“é˜Ÿåˆ—
+    mutable boost::mutex the_mutex;                            //boostäº’æ–¥é”
+    boost::condition_variable the_condition_variable;            //boostæ¡ä»¶å˜é‡
 
 public:
 
-	//´æÈëĞÂµÄÈÎÎñ
-	void push(Data const& data)
-	{
-		mutex::scoped_lock lock(the_mutex);				//»ñÈ¡»¥³âËø
-		the_queue.push(data);							//Ïò¶ÓÁĞÖĞ´æÈëÊı¾İ
-		lock.unlock();									//ÊÍ·ÅËø
-		the_condition_variable.notify_one();			//Í¨ÖªÕıÔÚ×èÈûµÈ´ıµÄÏß³Ì
-	}
+    //å­˜å…¥æ–°çš„ä»»åŠ¡
+    void push(Data const &data) {
+        boost::mutex::scoped_lock lock(the_mutex);                //è·å–äº’æ–¥é”
+        the_queue.push(data);                            //å‘é˜Ÿåˆ—ä¸­å­˜å…¥æ•°æ®
+        lock.unlock();                                    //é‡Šæ”¾é”
+        the_condition_variable.notify_one();            //é€šçŸ¥æ­£åœ¨é˜»å¡ç­‰å¾…çš„çº¿ç¨‹
+    }
 
-	//¼ì²é¶ÓÁĞÊÇ·ñÎª¿Õ
-	bool empty() const
-	{
-		mutex::scoped_lock lock(the_mutex);
-		return the_queue.empty();
-	}
+    //æ£€æŸ¥é˜Ÿåˆ—æ˜¯å¦ä¸ºç©º
+    bool empty() const {
+        boost::mutex::scoped_lock lock(the_mutex);
+        return the_queue.empty();
+    }
 
-	//È¡³ö
-	Data wait_and_pop()
-	{
-		mutex::scoped_lock lock(the_mutex);
+    //å–å‡º
+    Data wait_and_pop() {
+        boost::mutex::scoped_lock lock(the_mutex);
 
-		while (the_queue.empty())						//µ±¶ÓÁĞÎª¿ÕÊ±
-		{
-			the_condition_variable.wait(lock);			//µÈ´ıÌõ¼ş±äÁ¿Í¨Öª
-		}
+        while (the_queue.empty())                        //å½“é˜Ÿåˆ—ä¸ºç©ºæ—¶
+        {
+            the_condition_variable.wait(lock);            //ç­‰å¾…æ¡ä»¶å˜é‡é€šçŸ¥
+        }
 
-		Data popped_value = the_queue.front();			//»ñÈ¡¶ÓÁĞÖĞµÄ×îºóÒ»¸öÈÎÎñ
-		the_queue.pop();								//É¾³ı¸ÃÈÎÎñ
-		return popped_value;							//·µ»Ø¸ÃÈÎÎñ
-	}
+        Data popped_value = the_queue.front();            //è·å–é˜Ÿåˆ—ä¸­çš„æœ€åä¸€ä¸ªä»»åŠ¡
+        the_queue.pop();                                //åˆ é™¤è¯¥ä»»åŠ¡
+        return popped_value;                            //è¿”å›è¯¥ä»»åŠ¡
+    }
 
 };
 
 
-//´Ó×ÖµäÖĞ»ñÈ¡Ä³¸ö½¨Öµ¶ÔÓ¦µÄÕûÊı£¬²¢¸³Öµµ½ÇëÇó½á¹¹Ìå¶ÔÏóµÄÖµÉÏ
-void getInt(dict d, string key, int* value);
+//ä»å­—å…¸ä¸­è·å–æŸä¸ªå»ºå€¼å¯¹åº”çš„æ•´æ•°ï¼Œå¹¶èµ‹å€¼åˆ°è¯·æ±‚ç»“æ„ä½“å¯¹è±¡çš„å€¼ä¸Š
+void getInt(dict d, string key, int *value);
 
-//´Ó×ÖµäÖĞ»ñÈ¡Ä³¸ö½¨Öµ¶ÔÓ¦µÄ¸¡µãÊı£¬²¢¸³Öµµ½ÇëÇó½á¹¹Ìå¶ÔÏóµÄÖµÉÏ
-void getDouble(dict d, string key, double* value);
+//ä»å­—å…¸ä¸­è·å–æŸä¸ªå»ºå€¼å¯¹åº”çš„æµ®ç‚¹æ•°ï¼Œå¹¶èµ‹å€¼åˆ°è¯·æ±‚ç»“æ„ä½“å¯¹è±¡çš„å€¼ä¸Š
+void getDouble(dict d, string key, double *value);
 
-//´Ó×ÖµäÖĞ»ñÈ¡Ä³¸ö½¨Öµ¶ÔÓ¦µÄ×Ö·û£¬²¢¸³Öµµ½ÇëÇó½á¹¹Ìå¶ÔÏóµÄÖµÉÏ
-void getChar(dict d, string key, char* value);
+//ä»å­—å…¸ä¸­è·å–æŸä¸ªå»ºå€¼å¯¹åº”çš„å­—ç¬¦ï¼Œå¹¶èµ‹å€¼åˆ°è¯·æ±‚ç»“æ„ä½“å¯¹è±¡çš„å€¼ä¸Š
+void getChar(dict d, string key, char *value);
 
-//´Ó×ÖµäÖĞ»ñÈ¡Ä³¸ö½¨Öµ¶ÔÓ¦µÄ×Ö·û´®£¬²¢¸³Öµµ½ÇëÇó½á¹¹Ìå¶ÔÏóµÄÖµÉÏ
-void getStr(dict d, string key, char* value);
+//ä»å­—å…¸ä¸­è·å–æŸä¸ªå»ºå€¼å¯¹åº”çš„å­—ç¬¦ä¸²ï¼Œå¹¶èµ‹å€¼åˆ°è¯·æ±‚ç»“æ„ä½“å¯¹è±¡çš„å€¼ä¸Š
+void getStr(dict d, string key, char *value);
 
 
 ///-------------------------------------------------------------------------------------
-///C++ SPIµÄ»Øµ÷º¯Êı·½·¨ÊµÏÖ
+///C++ SPIçš„å›è°ƒå‡½æ•°æ–¹æ³•å®ç°
 ///-------------------------------------------------------------------------------------
 
-//APIµÄ¼Ì³ĞÊµÏÖ
-class QuoteApi : public XTP::API::QuoteSpi
-{
+//APIçš„ç»§æ‰¿å®ç°
+class QuoteApi : public XTP::API::QuoteSpi {
 private:
-	XTP::API::QuoteApi* api;			//API¶ÔÏó
-	thread *task_thread;				//¹¤×÷Ïß³ÌÖ¸Õë£¨ÏòpythonÖĞÍÆËÍÊı¾İ£©
-	ConcurrentQueue<Task*> task_queue;	//ÈÎÎñ¶ÓÁĞ
+    XTP::API::QuoteApi *api;            //APIå¯¹è±¡
+    boost::thread *task_thread;                //å·¥ä½œçº¿ç¨‹æŒ‡é’ˆï¼ˆå‘pythonä¸­æ¨é€æ•°æ®ï¼‰
+    ConcurrentQueue<Task *> task_queue;    //ä»»åŠ¡é˜Ÿåˆ—
 
 public:
-	QuoteApi()
-	{
-		function0<void> f = boost::bind(&QuoteApi::processTask, this);
-		thread t(f);
-		this->task_thread = &t;
-	};
-
-	~QuoteApi()
-	{
-	};
-
-	//-------------------------------------------------------------------------------------
-	//API»Øµ÷º¯Êı
-	//-------------------------------------------------------------------------------------
-
-	///µ±¿Í»§¶ËÓëĞĞÇéºóÌ¨Í¨ĞÅÁ¬½Ó¶Ï¿ªÊ±£¬¸Ã·½·¨±»µ÷ÓÃ¡£
-	///@param reason ´íÎóÔ­Òò£¬ÇëÓë´íÎó´úÂë±í¶ÔÓ¦
-	///@remark api²»»á×Ô¶¯ÖØÁ¬£¬µ±¶ÏÏß·¢ÉúÊ±£¬ÇëÓÃ»§×ÔĞĞÑ¡ÔñºóĞø²Ù×÷¡£¿ÉÒÔÔÚ´Ëº¯ÊıÖĞµ÷ÓÃLoginÖØĞÂµÇÂ¼¡£×¢ÒâÓÃ»§ÖØĞÂµÇÂ¼ºó£¬ĞèÒªÖØĞÂ¶©ÔÄĞĞÇé
-	virtual void OnDisconnected(int reason);
-
-
-	///´íÎóÓ¦´ğ
-	///@param error_info µ±·şÎñÆ÷ÏìÓ¦·¢Éú´íÎóÊ±µÄ¾ßÌåµÄ´íÎó´úÂëºÍ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@remark ´Ëº¯ÊıÖ»ÓĞÔÚ·şÎñÆ÷·¢Éú´íÎóÊ±²Å»áµ÷ÓÃ£¬Ò»°ãÎŞĞèÓÃ»§´¦Àí
-	virtual void OnError(XTPRI *error_info);
-
-	///¶©ÔÄĞĞÇéÓ¦´ğ
-	///@param ticker ÏêÏ¸µÄºÏÔ¼¶©ÔÄÇé¿ö
-	///@param error_info ¶©ÔÄºÏÔ¼·¢Éú´íÎóÊ±µÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param is_last ÊÇ·ñ´Ë´Î¶©ÔÄµÄ×îºóÒ»¸öÓ¦´ğ£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@remark Ã¿Ìõ¶©ÔÄµÄºÏÔ¼¾ù¶ÔÓ¦Ò»Ìõ¶©ÔÄÓ¦´ğ£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnSubMarketData(XTPST *ticker, XTPRI *error_info, bool is_last);
-
-	///ÍË¶©ĞĞÇéÓ¦´ğ
-	///@param ticker ÏêÏ¸µÄºÏÔ¼È¡Ïû¶©ÔÄÇé¿ö
-	///@param error_info È¡Ïû¶©ÔÄºÏÔ¼Ê±·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param is_last ÊÇ·ñ´Ë´ÎÈ¡Ïû¶©ÔÄµÄ×îºóÒ»¸öÓ¦´ğ£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@remark Ã¿ÌõÈ¡Ïû¶©ÔÄµÄºÏÔ¼¾ù¶ÔÓ¦Ò»ÌõÈ¡Ïû¶©ÔÄÓ¦´ğ£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnUnSubMarketData(XTPST *ticker, XTPRI *error_info, bool is_last);
-
-	///Éî¶ÈĞĞÇéÍ¨Öª£¬°üº¬ÂòÒ»ÂôÒ»¶ÓÁĞ
-	///@param market_data ĞĞÇéÊı¾İ
-	///@param bid1_qty ÂòÒ»¶ÓÁĞÊı¾İ
-	///@param bid1_count ÂòÒ»¶ÓÁĞµÄÓĞĞ§Î¯ÍĞ±ÊÊı
-	///@param max_bid1_count ÂòÒ»¶ÓÁĞ×ÜÎ¯ÍĞ±ÊÊı
-	///@param ask1_qty ÂôÒ»¶ÓÁĞÊı¾İ
-	///@param ask1_count ÂôÒ»¶ÓÁĞµÄÓĞĞ§Î¯ÍĞ±ÊÊı
-	///@param max_ask1_count ÂôÒ»¶ÓÁĞ×ÜÎ¯ÍĞ±ÊÊı
-	///@remark ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnDepthMarketData(XTPMD *market_data, int64_t bid1_qty[], int32_t bid1_count, int32_t max_bid1_count, int64_t ask1_qty[], int32_t ask1_count, int32_t max_ask1_count);
-
-	///¶©ÔÄĞĞÇé¶©µ¥²¾Ó¦´ğ
-	///@param ticker ÏêÏ¸µÄºÏÔ¼¶©ÔÄÇé¿ö
-	///@param error_info ¶©ÔÄºÏÔ¼·¢Éú´íÎóÊ±µÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param is_last ÊÇ·ñ´Ë´Î¶©ÔÄµÄ×îºóÒ»¸öÓ¦´ğ£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@remark Ã¿Ìõ¶©ÔÄµÄºÏÔ¼¾ù¶ÔÓ¦Ò»Ìõ¶©ÔÄÓ¦´ğ£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnSubOrderBook(XTPST *ticker, XTPRI *error_info, bool is_last);
-
-	///ÍË¶©ĞĞÇé¶©µ¥²¾Ó¦´ğ
-	///@param ticker ÏêÏ¸µÄºÏÔ¼È¡Ïû¶©ÔÄÇé¿ö
-	///@param error_info È¡Ïû¶©ÔÄºÏÔ¼Ê±·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param is_last ÊÇ·ñ´Ë´ÎÈ¡Ïû¶©ÔÄµÄ×îºóÒ»¸öÓ¦´ğ£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@remark Ã¿ÌõÈ¡Ïû¶©ÔÄµÄºÏÔ¼¾ù¶ÔÓ¦Ò»ÌõÈ¡Ïû¶©ÔÄÓ¦´ğ£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnUnSubOrderBook(XTPST *ticker, XTPRI *error_info, bool is_last);
-
-	///ĞĞÇé¶©µ¥²¾Í¨Öª
-	///@param order_book ĞĞÇé¶©µ¥²¾Êı¾İ£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnOrderBook(XTPOB *order_book);
-
-	///¶©ÔÄÖğ±ÊĞĞÇéÓ¦´ğ
-	///@param ticker ÏêÏ¸µÄºÏÔ¼¶©ÔÄÇé¿ö
-	///@param error_info ¶©ÔÄºÏÔ¼·¢Éú´íÎóÊ±µÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param is_last ÊÇ·ñ´Ë´Î¶©ÔÄµÄ×îºóÒ»¸öÓ¦´ğ£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@remark Ã¿Ìõ¶©ÔÄµÄºÏÔ¼¾ù¶ÔÓ¦Ò»Ìõ¶©ÔÄÓ¦´ğ£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnSubTickByTick(XTPST *ticker, XTPRI *error_info, bool is_last);
-
-	///ÍË¶©Öğ±ÊĞĞÇéÓ¦´ğ
-	///@param ticker ÏêÏ¸µÄºÏÔ¼È¡Ïû¶©ÔÄÇé¿ö
-	///@param error_info È¡Ïû¶©ÔÄºÏÔ¼Ê±·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param is_last ÊÇ·ñ´Ë´ÎÈ¡Ïû¶©ÔÄµÄ×îºóÒ»¸öÓ¦´ğ£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@remark Ã¿ÌõÈ¡Ïû¶©ÔÄµÄºÏÔ¼¾ù¶ÔÓ¦Ò»ÌõÈ¡Ïû¶©ÔÄÓ¦´ğ£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnUnSubTickByTick(XTPST *ticker, XTPRI *error_info, bool is_last);
-
-	///Öğ±ÊĞĞÇéÍ¨Öª
-	///@param tbt_data Öğ±ÊĞĞÇéÊı¾İ£¬°üÀ¨Öğ±ÊÎ¯ÍĞºÍÖğ±Ê³É½»£¬´ËÎª¹²ÓÃ½á¹¹Ìå£¬ĞèÒª¸ù¾İtypeÀ´Çø·ÖÊÇÖğ±ÊÎ¯ÍĞ»¹ÊÇÖğ±Ê³É½»£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnTickByTick(XTPTBT *tbt_data);
-
-	///¶©ÔÄÈ«ÊĞ³¡µÄ¹ÉÆ±ĞĞÇéÓ¦´ğ
-	///@param exchage_id ±íÊ¾µ±Ç°È«¶©ÔÄµÄÊĞ³¡£¬Èç¹ûÎªXTP_EXCHANGE_UNKNOWN£¬±íÊ¾»¦ÉîÈ«ÊĞ³¡£¬XTP_EXCHANGE_SH±íÊ¾ÎªÉÏº£È«ÊĞ³¡£¬XTP_EXCHANGE_SZ±íÊ¾ÎªÉîÛÚÈ«ÊĞ³¡
-	///@param error_info È¡Ïû¶©ÔÄºÏÔ¼Ê±·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@remark ĞèÒª¿ìËÙ·µ»Ø
-	virtual void OnSubscribeAllMarketData(XTP_EXCHANGE_TYPE exchage_id, XTPRI *error_info);
-
-	///ÍË¶©È«ÊĞ³¡µÄĞĞÇéÓ¦´ğ
-	///@param error_info È¡Ïû¶©ÔÄºÏÔ¼Ê±·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@remark ĞèÒª¿ìËÙ·µ»Ø
-	virtual void OnUnSubscribeAllMarketData(XTP_EXCHANGE_TYPE exchage_id,XTPRI *error_info);
-
-	///¶©ÔÄÈ«ÊĞ³¡µÄĞĞÇé¶©µ¥²¾Ó¦´ğ
-	///@param error_info È¡Ïû¶©ÔÄºÏÔ¼Ê±·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@remark ĞèÒª¿ìËÙ·µ»Ø
-	virtual void OnSubscribeAllOrderBook(XTP_EXCHANGE_TYPE exchage_id,XTPRI *error_info);
+    QuoteApi() {
+        function0<void> f = boost::bind(&QuoteApi::processTask, this);
+        boost::thread t(f);
+        this->task_thread = &t;
+    };
+
+    ~QuoteApi() {
+    };
+
+    //-------------------------------------------------------------------------------------
+    //APIå›è°ƒå‡½æ•°
+    //-------------------------------------------------------------------------------------
+
+    ///å½“å®¢æˆ·ç«¯ä¸è¡Œæƒ…åå°é€šä¿¡è¿æ¥æ–­å¼€æ—¶ï¼Œè¯¥æ–¹æ³•è¢«è°ƒç”¨ã€‚
+    ///@param reason é”™è¯¯åŸå› ï¼Œè¯·ä¸é”™è¯¯ä»£ç è¡¨å¯¹åº”
+    ///@remark apiä¸ä¼šè‡ªåŠ¨é‡è¿ï¼Œå½“æ–­çº¿å‘ç”Ÿæ—¶ï¼Œè¯·ç”¨æˆ·è‡ªè¡Œé€‰æ‹©åç»­æ“ä½œã€‚å¯ä»¥åœ¨æ­¤å‡½æ•°ä¸­è°ƒç”¨Loginé‡æ–°ç™»å½•ã€‚æ³¨æ„ç”¨æˆ·é‡æ–°ç™»å½•åï¼Œéœ€è¦é‡æ–°è®¢é˜…è¡Œæƒ…
+    virtual void OnDisconnected(int reason);
+
+
+    ///é”™è¯¯åº”ç­”
+    ///@param error_info å½“æœåŠ¡å™¨å“åº”å‘ç”Ÿé”™è¯¯æ—¶çš„å…·ä½“çš„é”™è¯¯ä»£ç å’Œé”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@remark æ­¤å‡½æ•°åªæœ‰åœ¨æœåŠ¡å™¨å‘ç”Ÿé”™è¯¯æ—¶æ‰ä¼šè°ƒç”¨ï¼Œä¸€èˆ¬æ— éœ€ç”¨æˆ·å¤„ç†
+    virtual void OnError(XTPRI *error_info);
+
+    ///è®¢é˜…è¡Œæƒ…åº”ç­”
+    ///@param ticker è¯¦ç»†çš„åˆçº¦è®¢é˜…æƒ…å†µ
+    ///@param error_info è®¢é˜…åˆçº¦å‘ç”Ÿé”™è¯¯æ—¶çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param is_last æ˜¯å¦æ­¤æ¬¡è®¢é˜…çš„æœ€åä¸€ä¸ªåº”ç­”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@remark æ¯æ¡è®¢é˜…çš„åˆçº¦å‡å¯¹åº”ä¸€æ¡è®¢é˜…åº”ç­”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void OnSubMarketData(XTPST *ticker, XTPRI *error_info, bool is_last);
+
+    ///é€€è®¢è¡Œæƒ…åº”ç­”
+    ///@param ticker è¯¦ç»†çš„åˆçº¦å–æ¶ˆè®¢é˜…æƒ…å†µ
+    ///@param error_info å–æ¶ˆè®¢é˜…åˆçº¦æ—¶å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param is_last æ˜¯å¦æ­¤æ¬¡å–æ¶ˆè®¢é˜…çš„æœ€åä¸€ä¸ªåº”ç­”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@remark æ¯æ¡å–æ¶ˆè®¢é˜…çš„åˆçº¦å‡å¯¹åº”ä¸€æ¡å–æ¶ˆè®¢é˜…åº”ç­”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void OnUnSubMarketData(XTPST *ticker, XTPRI *error_info, bool is_last);
+
+    ///æ·±åº¦è¡Œæƒ…é€šçŸ¥ï¼ŒåŒ…å«ä¹°ä¸€å–ä¸€é˜Ÿåˆ—
+    ///@param market_data è¡Œæƒ…æ•°æ®
+    ///@param bid1_qty ä¹°ä¸€é˜Ÿåˆ—æ•°æ®
+    ///@param bid1_count ä¹°ä¸€é˜Ÿåˆ—çš„æœ‰æ•ˆå§”æ‰˜ç¬”æ•°
+    ///@param max_bid1_count ä¹°ä¸€é˜Ÿåˆ—æ€»å§”æ‰˜ç¬”æ•°
+    ///@param ask1_qty å–ä¸€é˜Ÿåˆ—æ•°æ®
+    ///@param ask1_count å–ä¸€é˜Ÿåˆ—çš„æœ‰æ•ˆå§”æ‰˜ç¬”æ•°
+    ///@param max_ask1_count å–ä¸€é˜Ÿåˆ—æ€»å§”æ‰˜ç¬”æ•°
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void OnDepthMarketData(XTPMD *market_data, int64_t bid1_qty[], int32_t bid1_count, int32_t max_bid1_count,
+                                   int64_t ask1_qty[], int32_t ask1_count, int32_t max_ask1_count);
+
+    ///è®¢é˜…è¡Œæƒ…è®¢å•ç°¿åº”ç­”
+    ///@param ticker è¯¦ç»†çš„åˆçº¦è®¢é˜…æƒ…å†µ
+    ///@param error_info è®¢é˜…åˆçº¦å‘ç”Ÿé”™è¯¯æ—¶çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param is_last æ˜¯å¦æ­¤æ¬¡è®¢é˜…çš„æœ€åä¸€ä¸ªåº”ç­”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@remark æ¯æ¡è®¢é˜…çš„åˆçº¦å‡å¯¹åº”ä¸€æ¡è®¢é˜…åº”ç­”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void OnSubOrderBook(XTPST *ticker, XTPRI *error_info, bool is_last);
+
+    ///é€€è®¢è¡Œæƒ…è®¢å•ç°¿åº”ç­”
+    ///@param ticker è¯¦ç»†çš„åˆçº¦å–æ¶ˆè®¢é˜…æƒ…å†µ
+    ///@param error_info å–æ¶ˆè®¢é˜…åˆçº¦æ—¶å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param is_last æ˜¯å¦æ­¤æ¬¡å–æ¶ˆè®¢é˜…çš„æœ€åä¸€ä¸ªåº”ç­”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@remark æ¯æ¡å–æ¶ˆè®¢é˜…çš„åˆçº¦å‡å¯¹åº”ä¸€æ¡å–æ¶ˆè®¢é˜…åº”ç­”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void OnUnSubOrderBook(XTPST *ticker, XTPRI *error_info, bool is_last);
+
+    ///è¡Œæƒ…è®¢å•ç°¿é€šçŸ¥
+    ///@param order_book è¡Œæƒ…è®¢å•ç°¿æ•°æ®ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void OnOrderBook(XTPOB *order_book);
+
+    ///è®¢é˜…é€ç¬”è¡Œæƒ…åº”ç­”
+    ///@param ticker è¯¦ç»†çš„åˆçº¦è®¢é˜…æƒ…å†µ
+    ///@param error_info è®¢é˜…åˆçº¦å‘ç”Ÿé”™è¯¯æ—¶çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param is_last æ˜¯å¦æ­¤æ¬¡è®¢é˜…çš„æœ€åä¸€ä¸ªåº”ç­”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@remark æ¯æ¡è®¢é˜…çš„åˆçº¦å‡å¯¹åº”ä¸€æ¡è®¢é˜…åº”ç­”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void OnSubTickByTick(XTPST *ticker, XTPRI *error_info, bool is_last);
+
+    ///é€€è®¢é€ç¬”è¡Œæƒ…åº”ç­”
+    ///@param ticker è¯¦ç»†çš„åˆçº¦å–æ¶ˆè®¢é˜…æƒ…å†µ
+    ///@param error_info å–æ¶ˆè®¢é˜…åˆçº¦æ—¶å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param is_last æ˜¯å¦æ­¤æ¬¡å–æ¶ˆè®¢é˜…çš„æœ€åä¸€ä¸ªåº”ç­”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@remark æ¯æ¡å–æ¶ˆè®¢é˜…çš„åˆçº¦å‡å¯¹åº”ä¸€æ¡å–æ¶ˆè®¢é˜…åº”ç­”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void OnUnSubTickByTick(XTPST *ticker, XTPRI *error_info, bool is_last);
+
+    ///é€ç¬”è¡Œæƒ…é€šçŸ¥
+    ///@param tbt_data é€ç¬”è¡Œæƒ…æ•°æ®ï¼ŒåŒ…æ‹¬é€ç¬”å§”æ‰˜å’Œé€ç¬”æˆäº¤ï¼Œæ­¤ä¸ºå…±ç”¨ç»“æ„ä½“ï¼Œéœ€è¦æ ¹æ®typeæ¥åŒºåˆ†æ˜¯é€ç¬”å§”æ‰˜è¿˜æ˜¯é€ç¬”æˆäº¤ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void OnTickByTick(XTPTBT *tbt_data);
+
+    ///è®¢é˜…å…¨å¸‚åœºçš„è‚¡ç¥¨è¡Œæƒ…åº”ç­”
+    ///@param exchage_id è¡¨ç¤ºå½“å‰å…¨è®¢é˜…çš„å¸‚åœºï¼Œå¦‚æœä¸ºXTP_EXCHANGE_UNKNOWNï¼Œè¡¨ç¤ºæ²ªæ·±å…¨å¸‚åœºï¼ŒXTP_EXCHANGE_SHè¡¨ç¤ºä¸ºä¸Šæµ·å…¨å¸‚åœºï¼ŒXTP_EXCHANGE_SZè¡¨ç¤ºä¸ºæ·±åœ³å…¨å¸‚åœº
+    ///@param error_info å–æ¶ˆè®¢é˜…åˆçº¦æ—¶å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›
+    virtual void OnSubscribeAllMarketData(XTP_EXCHANGE_TYPE exchage_id, XTPRI *error_info);
+
+    ///é€€è®¢å…¨å¸‚åœºçš„è¡Œæƒ…åº”ç­”
+    ///@param error_info å–æ¶ˆè®¢é˜…åˆçº¦æ—¶å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›
+    virtual void OnUnSubscribeAllMarketData(XTP_EXCHANGE_TYPE exchage_id, XTPRI *error_info);
+
+    ///è®¢é˜…å…¨å¸‚åœºçš„è¡Œæƒ…è®¢å•ç°¿åº”ç­”
+    ///@param error_info å–æ¶ˆè®¢é˜…åˆçº¦æ—¶å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›
+    virtual void OnSubscribeAllOrderBook(XTP_EXCHANGE_TYPE exchage_id, XTPRI *error_info);
 
-	///ÍË¶©È«ÊĞ³¡µÄĞĞÇé¶©µ¥²¾Ó¦´ğ
-	///@param error_info È¡Ïû¶©ÔÄºÏÔ¼Ê±·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@remark ĞèÒª¿ìËÙ·µ»Ø
-	virtual void OnUnSubscribeAllOrderBook(XTP_EXCHANGE_TYPE exchage_id,XTPRI *error_info);
+    ///é€€è®¢å…¨å¸‚åœºçš„è¡Œæƒ…è®¢å•ç°¿åº”ç­”
+    ///@param error_info å–æ¶ˆè®¢é˜…åˆçº¦æ—¶å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›
+    virtual void OnUnSubscribeAllOrderBook(XTP_EXCHANGE_TYPE exchage_id, XTPRI *error_info);
 
-	///¶©ÔÄÈ«ÊĞ³¡µÄÖğ±ÊĞĞÇéÓ¦´ğ
-	///@param error_info È¡Ïû¶©ÔÄºÏÔ¼Ê±·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@remark ĞèÒª¿ìËÙ·µ»Ø
-	virtual void OnSubscribeAllTickByTick(XTP_EXCHANGE_TYPE exchage_id,XTPRI *error_info);
+    ///è®¢é˜…å…¨å¸‚åœºçš„é€ç¬”è¡Œæƒ…åº”ç­”
+    ///@param error_info å–æ¶ˆè®¢é˜…åˆçº¦æ—¶å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›
+    virtual void OnSubscribeAllTickByTick(XTP_EXCHANGE_TYPE exchage_id, XTPRI *error_info);
 
-	///ÍË¶©È«ÊĞ³¡µÄÖğ±ÊĞĞÇéÓ¦´ğ
-	///@param error_info È¡Ïû¶©ÔÄºÏÔ¼Ê±·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@remark ĞèÒª¿ìËÙ·µ»Ø
-	virtual void OnUnSubscribeAllTickByTick(XTP_EXCHANGE_TYPE exchage_id,XTPRI *error_info);
+    ///é€€è®¢å…¨å¸‚åœºçš„é€ç¬”è¡Œæƒ…åº”ç­”
+    ///@param error_info å–æ¶ˆè®¢é˜…åˆçº¦æ—¶å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›
+    virtual void OnUnSubscribeAllTickByTick(XTP_EXCHANGE_TYPE exchage_id, XTPRI *error_info);
 
 
-	///²éÑ¯¿É½»Ò×ºÏÔ¼µÄÓ¦´ğ
-	///@param ticker_info ¿É½»Ò×ºÏÔ¼ĞÅÏ¢
-	///@param error_info ²éÑ¯¿É½»Ò×ºÏÔ¼Ê±·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param is_last ÊÇ·ñ´Ë´Î²éÑ¯¿É½»Ò×ºÏÔ¼µÄ×îºóÒ»¸öÓ¦´ğ£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	virtual void OnQueryAllTickers(XTPQSI* ticker_info, XTPRI *error_info, bool is_last);
+    ///æŸ¥è¯¢å¯äº¤æ˜“åˆçº¦çš„åº”ç­”
+    ///@param ticker_info å¯äº¤æ˜“åˆçº¦ä¿¡æ¯
+    ///@param error_info æŸ¥è¯¢å¯äº¤æ˜“åˆçº¦æ—¶å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param is_last æ˜¯å¦æ­¤æ¬¡æŸ¥è¯¢å¯äº¤æ˜“åˆçº¦çš„æœ€åä¸€ä¸ªåº”ç­”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    virtual void OnQueryAllTickers(XTPQSI *ticker_info, XTPRI *error_info, bool is_last);
 
-	///²éÑ¯ºÏÔ¼µÄ×îĞÂ¼Û¸ñĞÅÏ¢Ó¦´ğ
-	///@param ticker_info ºÏÔ¼µÄ×îĞÂ¼Û¸ñĞÅÏ¢
-	///@param error_info ²éÑ¯ºÏÔ¼µÄ×îĞÂ¼Û¸ñĞÅÏ¢Ê±·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param is_last ÊÇ·ñ´Ë´Î²éÑ¯µÄ×îºóÒ»¸öÓ¦´ğ£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	virtual void OnQueryTickersPriceInfo(XTPTPI* ticker_info, XTPRI *error_info, bool is_last);
+    ///æŸ¥è¯¢åˆçº¦çš„æœ€æ–°ä»·æ ¼ä¿¡æ¯åº”ç­”
+    ///@param ticker_info åˆçº¦çš„æœ€æ–°ä»·æ ¼ä¿¡æ¯
+    ///@param error_info æŸ¥è¯¢åˆçº¦çš„æœ€æ–°ä»·æ ¼ä¿¡æ¯æ—¶å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param is_last æ˜¯å¦æ­¤æ¬¡æŸ¥è¯¢çš„æœ€åä¸€ä¸ªåº”ç­”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    virtual void OnQueryTickersPriceInfo(XTPTPI *ticker_info, XTPRI *error_info, bool is_last);
 
 
-	///¶©ÔÄÈ«ÊĞ³¡µÄÆÚÈ¨ĞĞÇéÓ¦´ğ
-	///@param exchage_id ±íÊ¾µ±Ç°È«¶©ÔÄµÄÊĞ³¡£¬Èç¹ûÎªXTP_EXCHANGE_UNKNOWN£¬±íÊ¾»¦ÉîÈ«ÊĞ³¡£¬XTP_EXCHANGE_SH±íÊ¾ÎªÉÏº£È«ÊĞ³¡£¬XTP_EXCHANGE_SZ±íÊ¾ÎªÉîÛÚÈ«ÊĞ³¡
-	///@param error_info È¡Ïû¶©ÔÄºÏÔ¼Ê±·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@remark ĞèÒª¿ìËÙ·µ»Ø
-	virtual void OnSubscribeAllOptionMarketData(XTP_EXCHANGE_TYPE exchage_id, XTPRI *error_info);
+    ///è®¢é˜…å…¨å¸‚åœºçš„æœŸæƒè¡Œæƒ…åº”ç­”
+    ///@param exchage_id è¡¨ç¤ºå½“å‰å…¨è®¢é˜…çš„å¸‚åœºï¼Œå¦‚æœä¸ºXTP_EXCHANGE_UNKNOWNï¼Œè¡¨ç¤ºæ²ªæ·±å…¨å¸‚åœºï¼ŒXTP_EXCHANGE_SHè¡¨ç¤ºä¸ºä¸Šæµ·å…¨å¸‚åœºï¼ŒXTP_EXCHANGE_SZè¡¨ç¤ºä¸ºæ·±åœ³å…¨å¸‚åœº
+    ///@param error_info å–æ¶ˆè®¢é˜…åˆçº¦æ—¶å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›
+    virtual void OnSubscribeAllOptionMarketData(XTP_EXCHANGE_TYPE exchage_id, XTPRI *error_info);
 
-	///ÍË¶©È«ÊĞ³¡µÄÆÚÈ¨ĞĞÇéÓ¦´ğ
-	///@param exchage_id ±íÊ¾µ±Ç°È«¶©ÔÄµÄÊĞ³¡£¬Èç¹ûÎªXTP_EXCHANGE_UNKNOWN£¬±íÊ¾»¦ÉîÈ«ÊĞ³¡£¬XTP_EXCHANGE_SH±íÊ¾ÎªÉÏº£È«ÊĞ³¡£¬XTP_EXCHANGE_SZ±íÊ¾ÎªÉîÛÚÈ«ÊĞ³¡
-	///@param error_info È¡Ïû¶©ÔÄºÏÔ¼Ê±·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@remark ĞèÒª¿ìËÙ·µ»Ø
-	virtual void OnUnSubscribeAllOptionMarketData(XTP_EXCHANGE_TYPE exchage_id, XTPRI *error_info);
+    ///é€€è®¢å…¨å¸‚åœºçš„æœŸæƒè¡Œæƒ…åº”ç­”
+    ///@param exchage_id è¡¨ç¤ºå½“å‰å…¨è®¢é˜…çš„å¸‚åœºï¼Œå¦‚æœä¸ºXTP_EXCHANGE_UNKNOWNï¼Œè¡¨ç¤ºæ²ªæ·±å…¨å¸‚åœºï¼ŒXTP_EXCHANGE_SHè¡¨ç¤ºä¸ºä¸Šæµ·å…¨å¸‚åœºï¼ŒXTP_EXCHANGE_SZè¡¨ç¤ºä¸ºæ·±åœ³å…¨å¸‚åœº
+    ///@param error_info å–æ¶ˆè®¢é˜…åˆçº¦æ—¶å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›
+    virtual void OnUnSubscribeAllOptionMarketData(XTP_EXCHANGE_TYPE exchage_id, XTPRI *error_info);
 
-	///¶©ÔÄÈ«ÊĞ³¡µÄÆÚÈ¨ĞĞÇé¶©µ¥²¾Ó¦´ğ
-	///@param exchage_id ±íÊ¾µ±Ç°È«¶©ÔÄµÄÊĞ³¡£¬Èç¹ûÎªXTP_EXCHANGE_UNKNOWN£¬±íÊ¾»¦ÉîÈ«ÊĞ³¡£¬XTP_EXCHANGE_SH±íÊ¾ÎªÉÏº£È«ÊĞ³¡£¬XTP_EXCHANGE_SZ±íÊ¾ÎªÉîÛÚÈ«ÊĞ³¡
-	///@param error_info È¡Ïû¶©ÔÄºÏÔ¼Ê±·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@remark ĞèÒª¿ìËÙ·µ»Ø
-	virtual void OnSubscribeAllOptionOrderBook(XTP_EXCHANGE_TYPE exchage_id, XTPRI *error_info);
+    ///è®¢é˜…å…¨å¸‚åœºçš„æœŸæƒè¡Œæƒ…è®¢å•ç°¿åº”ç­”
+    ///@param exchage_id è¡¨ç¤ºå½“å‰å…¨è®¢é˜…çš„å¸‚åœºï¼Œå¦‚æœä¸ºXTP_EXCHANGE_UNKNOWNï¼Œè¡¨ç¤ºæ²ªæ·±å…¨å¸‚åœºï¼ŒXTP_EXCHANGE_SHè¡¨ç¤ºä¸ºä¸Šæµ·å…¨å¸‚åœºï¼ŒXTP_EXCHANGE_SZè¡¨ç¤ºä¸ºæ·±åœ³å…¨å¸‚åœº
+    ///@param error_info å–æ¶ˆè®¢é˜…åˆçº¦æ—¶å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›
+    virtual void OnSubscribeAllOptionOrderBook(XTP_EXCHANGE_TYPE exchage_id, XTPRI *error_info);
 
-	///ÍË¶©È«ÊĞ³¡µÄÆÚÈ¨ĞĞÇé¶©µ¥²¾Ó¦´ğ
-	///@param exchage_id ±íÊ¾µ±Ç°È«¶©ÔÄµÄÊĞ³¡£¬Èç¹ûÎªXTP_EXCHANGE_UNKNOWN£¬±íÊ¾»¦ÉîÈ«ÊĞ³¡£¬XTP_EXCHANGE_SH±íÊ¾ÎªÉÏº£È«ÊĞ³¡£¬XTP_EXCHANGE_SZ±íÊ¾ÎªÉîÛÚÈ«ÊĞ³¡
-	///@param error_info È¡Ïû¶©ÔÄºÏÔ¼Ê±·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@remark ĞèÒª¿ìËÙ·µ»Ø
-	virtual void OnUnSubscribeAllOptionOrderBook(XTP_EXCHANGE_TYPE exchage_id, XTPRI *error_info);
+    ///é€€è®¢å…¨å¸‚åœºçš„æœŸæƒè¡Œæƒ…è®¢å•ç°¿åº”ç­”
+    ///@param exchage_id è¡¨ç¤ºå½“å‰å…¨è®¢é˜…çš„å¸‚åœºï¼Œå¦‚æœä¸ºXTP_EXCHANGE_UNKNOWNï¼Œè¡¨ç¤ºæ²ªæ·±å…¨å¸‚åœºï¼ŒXTP_EXCHANGE_SHè¡¨ç¤ºä¸ºä¸Šæµ·å…¨å¸‚åœºï¼ŒXTP_EXCHANGE_SZè¡¨ç¤ºä¸ºæ·±åœ³å…¨å¸‚åœº
+    ///@param error_info å–æ¶ˆè®¢é˜…åˆçº¦æ—¶å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›
+    virtual void OnUnSubscribeAllOptionOrderBook(XTP_EXCHANGE_TYPE exchage_id, XTPRI *error_info);
 
-	///¶©ÔÄÈ«ÊĞ³¡µÄÆÚÈ¨Öğ±ÊĞĞÇéÓ¦´ğ
-	///@param exchage_id ±íÊ¾µ±Ç°È«¶©ÔÄµÄÊĞ³¡£¬Èç¹ûÎªXTP_EXCHANGE_UNKNOWN£¬±íÊ¾»¦ÉîÈ«ÊĞ³¡£¬XTP_EXCHANGE_SH±íÊ¾ÎªÉÏº£È«ÊĞ³¡£¬XTP_EXCHANGE_SZ±íÊ¾ÎªÉîÛÚÈ«ÊĞ³¡
-	///@param error_info È¡Ïû¶©ÔÄºÏÔ¼Ê±·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@remark ĞèÒª¿ìËÙ·µ»Ø
-	virtual void OnSubscribeAllOptionTickByTick(XTP_EXCHANGE_TYPE exchage_id, XTPRI *error_info);
+    ///è®¢é˜…å…¨å¸‚åœºçš„æœŸæƒé€ç¬”è¡Œæƒ…åº”ç­”
+    ///@param exchage_id è¡¨ç¤ºå½“å‰å…¨è®¢é˜…çš„å¸‚åœºï¼Œå¦‚æœä¸ºXTP_EXCHANGE_UNKNOWNï¼Œè¡¨ç¤ºæ²ªæ·±å…¨å¸‚åœºï¼ŒXTP_EXCHANGE_SHè¡¨ç¤ºä¸ºä¸Šæµ·å…¨å¸‚åœºï¼ŒXTP_EXCHANGE_SZè¡¨ç¤ºä¸ºæ·±åœ³å…¨å¸‚åœº
+    ///@param error_info å–æ¶ˆè®¢é˜…åˆçº¦æ—¶å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›
+    virtual void OnSubscribeAllOptionTickByTick(XTP_EXCHANGE_TYPE exchage_id, XTPRI *error_info);
 
-	///ÍË¶©È«ÊĞ³¡µÄÆÚÈ¨Öğ±ÊĞĞÇéÓ¦´ğ
-	///@param exchage_id ±íÊ¾µ±Ç°È«¶©ÔÄµÄÊĞ³¡£¬Èç¹ûÎªXTP_EXCHANGE_UNKNOWN£¬±íÊ¾»¦ÉîÈ«ÊĞ³¡£¬XTP_EXCHANGE_SH±íÊ¾ÎªÉÏº£È«ÊĞ³¡£¬XTP_EXCHANGE_SZ±íÊ¾ÎªÉîÛÚÈ«ÊĞ³¡
-	///@param error_info È¡Ïû¶©ÔÄºÏÔ¼Ê±·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@remark ĞèÒª¿ìËÙ·µ»Ø
-	virtual void OnUnSubscribeAllOptionTickByTick(XTP_EXCHANGE_TYPE exchage_id, XTPRI *error_info);
+    ///é€€è®¢å…¨å¸‚åœºçš„æœŸæƒé€ç¬”è¡Œæƒ…åº”ç­”
+    ///@param exchage_id è¡¨ç¤ºå½“å‰å…¨è®¢é˜…çš„å¸‚åœºï¼Œå¦‚æœä¸ºXTP_EXCHANGE_UNKNOWNï¼Œè¡¨ç¤ºæ²ªæ·±å…¨å¸‚åœºï¼ŒXTP_EXCHANGE_SHè¡¨ç¤ºä¸ºä¸Šæµ·å…¨å¸‚åœºï¼ŒXTP_EXCHANGE_SZè¡¨ç¤ºä¸ºæ·±åœ³å…¨å¸‚åœº
+    ///@param error_info å–æ¶ˆè®¢é˜…åˆçº¦æ—¶å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›
+    virtual void OnUnSubscribeAllOptionTickByTick(XTP_EXCHANGE_TYPE exchage_id, XTPRI *error_info);
 
-	///²éÑ¯ºÏÔ¼ÍêÕû¾²Ì¬ĞÅÏ¢µÄÓ¦´ğ
-	///@param ticker_info ºÏÔ¼ÍêÕû¾²Ì¬ĞÅÏ¢
-	///@param error_info ²éÑ¯ºÏÔ¼ÍêÕû¾²Ì¬ĞÅÏ¢Ê±·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param is_last ÊÇ·ñ´Ë´Î²éÑ¯ºÏÔ¼ÍêÕû¾²Ì¬ĞÅÏ¢µÄ×îºóÒ»¸öÓ¦´ğ£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	virtual void OnQueryAllTickersFullInfo(XTPQFI* ticker_info, XTPRI *error_info, bool is_last);
+    ///æŸ¥è¯¢åˆçº¦å®Œæ•´é™æ€ä¿¡æ¯çš„åº”ç­”
+    ///@param ticker_info åˆçº¦å®Œæ•´é™æ€ä¿¡æ¯
+    ///@param error_info æŸ¥è¯¢åˆçº¦å®Œæ•´é™æ€ä¿¡æ¯æ—¶å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param is_last æ˜¯å¦æ­¤æ¬¡æŸ¥è¯¢åˆçº¦å®Œæ•´é™æ€ä¿¡æ¯çš„æœ€åä¸€ä¸ªåº”ç­”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    virtual void OnQueryAllTickersFullInfo(XTPQFI *ticker_info, XTPRI *error_info, bool is_last);
 
-	//-------------------------------------------------------------------------------------
-	//task£ºÈÎÎñ
-	//-------------------------------------------------------------------------------------
+    //-------------------------------------------------------------------------------------
+    //taskï¼šä»»åŠ¡
+    //-------------------------------------------------------------------------------------
 
-	void processTask();
+    void processTask();
 
-	void processDisconnected(Task *task);
+    void processDisconnected(Task *task);
 
-	void processError(Task *task);
+    void processError(Task *task);
 
-	void processSubMarketData(Task *task);
+    void processSubMarketData(Task *task);
 
-	void processUnSubMarketData(Task *task);
+    void processUnSubMarketData(Task *task);
 
-	void processDepthMarketData(Task *task);
+    void processDepthMarketData(Task *task);
 
-	void processSubOrderBook(Task *task);
+    void processSubOrderBook(Task *task);
 
-	void processUnSubOrderBook(Task *task);
+    void processUnSubOrderBook(Task *task);
 
-	void processOrderBook(Task *task);
+    void processOrderBook(Task *task);
 
-	void processSubTickByTick(Task *task);
+    void processSubTickByTick(Task *task);
 
-	void processUnSubTickByTick(Task *task);
+    void processUnSubTickByTick(Task *task);
 
-	void processTickByTick(Task *task);
+    void processTickByTick(Task *task);
 
-	void processSubscribeAllMarketData(Task *task);
+    void processSubscribeAllMarketData(Task *task);
 
-	void processUnSubscribeAllMarketData(Task *task);
+    void processUnSubscribeAllMarketData(Task *task);
 
-	void processSubscribeAllOrderBook(Task *task);
+    void processSubscribeAllOrderBook(Task *task);
 
-	void processUnSubscribeAllOrderBook(Task *task);
+    void processUnSubscribeAllOrderBook(Task *task);
 
-	void processSubscribeAllTickByTick(Task *task);
+    void processSubscribeAllTickByTick(Task *task);
 
-	void processUnSubscribeAllTickByTick(Task *task);
+    void processUnSubscribeAllTickByTick(Task *task);
 
-	void processQueryAllTickers(Task *task);
+    void processQueryAllTickers(Task *task);
 
-	void processQueryTickersPriceInfo(Task *task);
+    void processQueryTickersPriceInfo(Task *task);
 
-	void processQueryAllTickersFullInfo(Task *task);
+    void processQueryAllTickersFullInfo(Task *task);
 
 
-	void processSubscribeAllOptionMarketData(Task *task);
+    void processSubscribeAllOptionMarketData(Task *task);
 
-	void processUnSubscribeAllOptionMarketData(Task *task);
+    void processUnSubscribeAllOptionMarketData(Task *task);
 
-	void processSubscribeAllOptionOrderBook(Task *task);
+    void processSubscribeAllOptionOrderBook(Task *task);
 
-	void processUnSubscribeAllOptionOrderBook(Task *task);
+    void processUnSubscribeAllOptionOrderBook(Task *task);
 
-	void processSubscribeAllOptionTickByTick(Task *task);
+    void processSubscribeAllOptionTickByTick(Task *task);
 
-	void processUnSubscribeAllOptionTickByTick(Task *task);
-	//-------------------------------------------------------------------------------------
-	//data£º»Øµ÷º¯ÊıµÄÊı¾İ×Öµä
-	//error£º»Øµ÷º¯ÊıµÄ´íÎó×Öµä
-	//id£ºÇëÇóid
-	//last£ºÊÇ·ñÎª×îºó·µ»Ø
-	//i£ºÕûÊı
-	//-------------------------------------------------------------------------------------
+    void processUnSubscribeAllOptionTickByTick(Task *task);
+    //-------------------------------------------------------------------------------------
+    //dataï¼šå›è°ƒå‡½æ•°çš„æ•°æ®å­—å…¸
+    //errorï¼šå›è°ƒå‡½æ•°çš„é”™è¯¯å­—å…¸
+    //idï¼šè¯·æ±‚id
+    //lastï¼šæ˜¯å¦ä¸ºæœ€åè¿”å›
+    //iï¼šæ•´æ•°
+    //-------------------------------------------------------------------------------------
 
-	virtual void onDisconnected(int reason) {};
+    virtual void onDisconnected(int reason) {};
 
-	virtual void onError(dict data) {};
+    virtual void onError(dict data) {};
 
-	virtual void onSubMarketData(dict data, dict error, bool last) {};
+    virtual void onSubMarketData(dict data, dict error, bool last) {};
 
-	virtual void onUnSubMarketData(dict data, dict error, bool last) {};
+    virtual void onUnSubMarketData(dict data, dict error, bool last) {};
 
-	virtual void onDepthMarketData(dict data,boost::python::list bid1_qty_list,int bid1_count,int max_bid1_count,boost::python::list ask1_qty_list,int ask1_count,int max_ask1_count) {};
+    virtual void onDepthMarketData(dict data, boost::python::list bid1_qty_list, int bid1_count, int max_bid1_count,
+                                   boost::python::list ask1_qty_list, int ask1_count, int max_ask1_count) {};
 
-	virtual void onSubOrderBook(dict data, dict error, bool last) {};
+    virtual void onSubOrderBook(dict data, dict error, bool last) {};
 
-	virtual void onUnSubOrderBook(dict data, dict error, bool last) {};
+    virtual void onUnSubOrderBook(dict data, dict error, bool last) {};
 
-	virtual void onOrderBook(dict data) {};
+    virtual void onOrderBook(dict data) {};
 
-	virtual void onSubTickByTick(dict data, dict error, bool last) {};
+    virtual void onSubTickByTick(dict data, dict error, bool last) {};
 
-	virtual void onUnSubTickByTick(dict data, dict error, bool last) {};
+    virtual void onUnSubTickByTick(dict data, dict error, bool last) {};
 
-	virtual void onTickByTick(dict data) {};
+    virtual void onTickByTick(dict data) {};
 
-	virtual void onSubscribeAllMarketData(int exchange_id,dict error) {};
+    virtual void onSubscribeAllMarketData(int exchange_id, dict error) {};
 
-	virtual void onUnSubscribeAllMarketData(int exchange_id,dict error) {};
+    virtual void onUnSubscribeAllMarketData(int exchange_id, dict error) {};
 
-	virtual void onSubscribeAllOrderBook(int exchange_id,dict error) {};
+    virtual void onSubscribeAllOrderBook(int exchange_id, dict error) {};
 
-	virtual void onUnSubscribeAllOrderBook(int exchange_id,dict error) {};
+    virtual void onUnSubscribeAllOrderBook(int exchange_id, dict error) {};
 
-	virtual void onSubscribeAllTickByTick(int exchange_id,dict error) {};
+    virtual void onSubscribeAllTickByTick(int exchange_id, dict error) {};
 
-	virtual void onUnSubscribeAllTickByTick(int exchange_id,dict error) {};
+    virtual void onUnSubscribeAllTickByTick(int exchange_id, dict error) {};
 
-	virtual void onQueryAllTickers(dict data, dict error, bool last) {};
+    virtual void onQueryAllTickers(dict data, dict error, bool last) {};
 
-	virtual void onQueryTickersPriceInfo(dict data, dict error, bool last) {};
+    virtual void onQueryTickersPriceInfo(dict data, dict error, bool last) {};
 
-	virtual void onQueryAllTickersFullInfo(dict data, dict error, bool last) {};
+    virtual void onQueryAllTickersFullInfo(dict data, dict error, bool last) {};
 
 
-	virtual void onSubscribeAllOptionMarketData(int exchange_id,dict error) {};
+    virtual void onSubscribeAllOptionMarketData(int exchange_id, dict error) {};
 
-	virtual void onUnSubscribeAllOptionMarketData(int exchange_id,dict error) {};
+    virtual void onUnSubscribeAllOptionMarketData(int exchange_id, dict error) {};
 
-	virtual void onSubscribeAllOptionOrderBook(int exchange_id,dict error) {};
+    virtual void onSubscribeAllOptionOrderBook(int exchange_id, dict error) {};
 
-	virtual void onUnSubscribeAllOptionOrderBook(int exchange_id,dict error) {};
+    virtual void onUnSubscribeAllOptionOrderBook(int exchange_id, dict error) {};
 
-	virtual void onSubscribeAllOptionTickByTick(int exchange_id,dict error) {};
+    virtual void onSubscribeAllOptionTickByTick(int exchange_id, dict error) {};
 
-	virtual void onUnSubscribeAllOptionTickByTick(int exchange_id,dict error) {};
-	//-------------------------------------------------------------------------------------
-	//req:Ö÷¶¯º¯ÊıµÄÇëÇó×Öµä
-	//-------------------------------------------------------------------------------------
+    virtual void onUnSubscribeAllOptionTickByTick(int exchange_id, dict error) {};
+    //-------------------------------------------------------------------------------------
+    //req:ä¸»åŠ¨å‡½æ•°çš„è¯·æ±‚å­—å…¸
+    //-------------------------------------------------------------------------------------
 
-	void createQuoteApi(int clientid, string path, int log_level);
+    void createQuoteApi(int clientid, string path, int log_level);
 
-	void release();
+    void release();
 
-	int exit();
+    int exit();
 
-	string getTradingDay();
+    string getTradingDay();
 
-	string getApiVersion();
+    string getApiVersion();
 
-	dict getApiLastError();
+    dict getApiLastError();
 
-	void setUDPBufferSize(int size);
+    void setUDPBufferSize(int size);
 
-	void setHeartBeatInterval(int interval);
+    void setHeartBeatInterval(int interval);
 
-	void setUDPRecvThreadAffinity(int32_t cpu_no);
+    void setUDPRecvThreadAffinity(int32_t cpu_no);
 
-	void setUDPRecvThreadAffinityArray(boost::python::list tickerList,int count);
+    void setUDPRecvThreadAffinityArray(boost::python::list tickerList, int count);
 
-	void setUDPParseThreadAffinity(int32_t cpu_no);
+    void setUDPParseThreadAffinity(int32_t cpu_no);
 
-	void setUDPParseThreadAffinityArray(boost::python::list tickerList,int count);
+    void setUDPParseThreadAffinityArray(boost::python::list tickerList, int count);
 
-	void setUDPSeqLogOutPutFlag(bool flag);
+    void setUDPSeqLogOutPutFlag(bool flag);
 
-	int subscribeMarketData(boost::python::list tickerList,int count, int exchange);
+    int subscribeMarketData(boost::python::list tickerList, int count, int exchange);
 
-	int unSubscribeMarketData(boost::python::list tickerList,int count, int exchange);
+    int unSubscribeMarketData(boost::python::list tickerList, int count, int exchange);
 
-	int subscribeOrderBook(boost::python::list tickerList,int count, int exchange);
+    int subscribeOrderBook(boost::python::list tickerList, int count, int exchange);
 
-	int unSubscribeOrderBook(boost::python::list tickerList,int count, int exchange);
+    int unSubscribeOrderBook(boost::python::list tickerList, int count, int exchange);
 
-	int subscribeTickByTick(boost::python::list tickerList,int count, int exchange);
+    int subscribeTickByTick(boost::python::list tickerList, int count, int exchange);
 
-	int unSubscribeTickByTick(boost::python::list tickerList,int count, int exchange);
+    int unSubscribeTickByTick(boost::python::list tickerList, int count, int exchange);
 
-	int subscribeAllMarketData(int exchange = 3);
+    int subscribeAllMarketData(int exchange = 3);
 
-	int unSubscribeAllMarketData(int exchange = 3);
+    int unSubscribeAllMarketData(int exchange = 3);
 
-	int subscribeAllOrderBook(int exchange = 3);
+    int subscribeAllOrderBook(int exchange = 3);
 
-	int unSubscribeAllOrderBook(int exchange = 3);
+    int unSubscribeAllOrderBook(int exchange = 3);
 
-	int subscribeAllTickByTick(int exchange = 3);
+    int subscribeAllTickByTick(int exchange = 3);
 
-	int unSubscribeAllTickByTick(int exchange = 3);
+    int unSubscribeAllTickByTick(int exchange = 3);
 
-	int login(string ip, int port, string user, string password, int socktype,string local_ip);
+    int login(string ip, int port, string user, string password, int socktype, string local_ip);
 
-	int logout();
+    int logout();
 
-	int queryAllTickers(int exchange);
+    int queryAllTickers(int exchange);
 
-	int queryTickersPriceInfo(boost::python::list tickerList, int count, int exchange);
+    int queryTickersPriceInfo(boost::python::list tickerList, int count, int exchange);
 
-	int queryAllTickersPriceInfo();
+    int queryAllTickersPriceInfo();
 
-	int queryAllTickersFullInfo(int exchange);
+    int queryAllTickersFullInfo(int exchange);
 
 
     int subscribeAllOptionMarketData(int exchange = XTP_EXCHANGE_UNKNOWN);
 
-	int unSubscribeAllOptionMarketData(int exchange = XTP_EXCHANGE_UNKNOWN);
+    int unSubscribeAllOptionMarketData(int exchange = XTP_EXCHANGE_UNKNOWN);
 
-	int subscribeAllOptionOrderBook(int exchange = XTP_EXCHANGE_UNKNOWN);
+    int subscribeAllOptionOrderBook(int exchange = XTP_EXCHANGE_UNKNOWN);
 
-	int unSubscribeAllOptionOrderBook(int exchange = XTP_EXCHANGE_UNKNOWN);
+    int unSubscribeAllOptionOrderBook(int exchange = XTP_EXCHANGE_UNKNOWN);
 
-	int subscribeAllOptionTickByTick(int exchange = XTP_EXCHANGE_UNKNOWN);
+    int subscribeAllOptionTickByTick(int exchange = XTP_EXCHANGE_UNKNOWN);
 
-	int unSubscribeAllOptionTickByTick(int exchange = XTP_EXCHANGE_UNKNOWN);
+    int unSubscribeAllOptionTickByTick(int exchange = XTP_EXCHANGE_UNKNOWN);
 };

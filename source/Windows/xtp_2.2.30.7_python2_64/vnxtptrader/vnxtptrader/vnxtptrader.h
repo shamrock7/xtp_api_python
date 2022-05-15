@@ -1,9 +1,9 @@
-//ËµÃ÷²¿·Ö
+//è¯´æ˜éƒ¨åˆ†
 
 //API
 #include "xtp_trader_api.h"
 
-//ÏµÍ³
+//ç³»ç»Ÿ
 //#ifdef WIN32
 //#include "stdafx.h"
 //#endif
@@ -12,23 +12,24 @@
 
 //Boost
 #define BOOST_PYTHON_STATIC_LIB
-#include <boost/python/module.hpp>	//python·â×°
-#include <boost/python/def.hpp>		//python·â×°
-#include <boost/python/dict.hpp>	//python·â×°
-#include <boost/python/list.hpp>	//python·â×°
-#include <boost/python/object.hpp>	//python·â×°
-#include <boost/python.hpp>			//python·â×°
-#include <boost/thread.hpp>			//ÈÎÎñ¶ÓÁĞµÄÏß³Ì¹¦ÄÜ
-#include <boost/bind.hpp>			//ÈÎÎñ¶ÓÁĞµÄÏß³Ì¹¦ÄÜ
+
+#include <boost/python/module.hpp>    //pythonå°è£…
+#include <boost/python/def.hpp>        //pythonå°è£…
+#include <boost/python/dict.hpp>    //pythonå°è£…
+#include <boost/python/list.hpp>    //pythonå°è£…
+#include <boost/python/object.hpp>    //pythonå°è£…
+#include <boost/python.hpp>            //pythonå°è£…
+#include <boost/thread.hpp>            //ä»»åŠ¡é˜Ÿåˆ—çš„çº¿ç¨‹åŠŸèƒ½
+#include <boost/bind.hpp>            //ä»»åŠ¡é˜Ÿåˆ—çš„çº¿ç¨‹åŠŸèƒ½
 
 
-//ÃüÃû¿Õ¼ä
+//å‘½åç©ºé—´
 using namespace std;
 using namespace boost::python;
 using namespace boost;
 
 
-//³£Á¿
+//å¸¸é‡
 #define ONDISCONNECTED 1
 #define ONERROR 2
 #define ONORDEREVENT 3
@@ -81,94 +82,86 @@ using namespace boost;
 #define ONQUERYOTHERSERVERFUND 44
 
 ///-------------------------------------------------------------------------------------
-///APIÖĞµÄ²¿·Ö×é¼ş
+///APIä¸­çš„éƒ¨åˆ†ç»„ä»¶
 ///-------------------------------------------------------------------------------------
 
-//GILÈ«¾ÖËø¼ò»¯»ñÈ¡ÓÃ£¬
-//ÓÃÓÚ°ïÖúC++Ïß³Ì»ñµÃGILËø£¬´Ó¶ø·ÀÖ¹python±ÀÀ£
-class PyLock
-{
+//GILå…¨å±€é”ç®€åŒ–è·å–ç”¨ï¼Œ
+//ç”¨äºå¸®åŠ©C++çº¿ç¨‹è·å¾—GILé”ï¼Œä»è€Œé˜²æ­¢pythonå´©æºƒ
+class PyLock {
 private:
-	PyGILState_STATE gil_state;
+    PyGILState_STATE gil_state;
 
 public:
-	//ÔÚÄ³¸öº¯Êı·½·¨ÖĞ´´½¨¸Ã¶ÔÏóÊ±£¬»ñµÃGILËø
-	PyLock()
-	{
-		gil_state = PyGILState_Ensure();
-	}
+    //åœ¨æŸä¸ªå‡½æ•°æ–¹æ³•ä¸­åˆ›å»ºè¯¥å¯¹è±¡æ—¶ï¼Œè·å¾—GILé”
+    PyLock() {
+        gil_state = PyGILState_Ensure();
+    }
 
-	//ÔÚÄ³¸öº¯ÊıÍê³ÉºóÏú»Ù¸Ã¶ÔÏóÊ±£¬½â·ÅGILËø
-	~PyLock()
-	{
-		PyGILState_Release(gil_state);
-	}
+    //åœ¨æŸä¸ªå‡½æ•°å®Œæˆåé”€æ¯è¯¥å¯¹è±¡æ—¶ï¼Œè§£æ”¾GILé”
+    ~PyLock() {
+        PyGILState_Release(gil_state);
+    }
 };
 
 
-//ÈÎÎñ½á¹¹Ìå
-struct Task
-{
-	int task_name;		//»Øµ÷º¯ÊıÃû³Æ¶ÔÓ¦µÄ³£Á¿
-	void *task_data;	//Êı¾İ½á¹¹Ìå
-	void *task_error;	//´íÎó½á¹¹Ìå
-	int task_id;		//ÇëÇóid
-	bool task_last;		//ÊÇ·ñÎª×îºó·µ»Ø
-	uint64_t addtional_int;		//²¹³äÕûÊı×Ö¶Î
-	double remain_amount;//²¹³ädouble×Ö¶Î
-	int64_t addtional_int_two;		//²¹³äÕûÊı×Ö¶Î
-	int64_t addtional_int_three;		//²¹³äÕûÊı×Ö¶Î
-	int64_t addtional_int_four;		//²¹³äÕûÊı×Ö¶Î
+//ä»»åŠ¡ç»“æ„ä½“
+struct Task {
+    int task_name;        //å›è°ƒå‡½æ•°åç§°å¯¹åº”çš„å¸¸é‡
+    void *task_data;    //æ•°æ®ç»“æ„ä½“
+    void *task_error;    //é”™è¯¯ç»“æ„ä½“
+    int task_id;        //è¯·æ±‚id
+    bool task_last;        //æ˜¯å¦ä¸ºæœ€åè¿”å›
+    uint64_t addtional_int;        //è¡¥å……æ•´æ•°å­—æ®µ
+    double remain_amount;//è¡¥å……doubleå­—æ®µ
+    int64_t addtional_int_two;        //è¡¥å……æ•´æ•°å­—æ®µ
+    int64_t addtional_int_three;        //è¡¥å……æ•´æ•°å­—æ®µ
+    int64_t addtional_int_four;        //è¡¥å……æ•´æ•°å­—æ®µ
 
-	int64_t req_count;
-	int64_t order_sequence; 
-	int64_t query_reference;
-	int64_t trade_sequence;
+    int64_t req_count;
+    int64_t order_sequence;
+    int64_t query_reference;
+    int64_t trade_sequence;
 };
 
 
-///Ïß³Ì°²È«µÄ¶ÓÁĞ
+///çº¿ç¨‹å®‰å…¨çš„é˜Ÿåˆ—
 template<typename Data>
 
-class ConcurrentQueue
-{
+class ConcurrentQueue {
 private:
-	queue<Data> the_queue;								//±ê×¼¿â¶ÓÁĞ
-	mutable mutex the_mutex;							//boost»¥³âËø
-	condition_variable the_condition_variable;			//boostÌõ¼ş±äÁ¿
+    queue<Data> the_queue;                                //æ ‡å‡†åº“é˜Ÿåˆ—
+    mutable boost::mutex the_mutex;                        //boostäº’æ–¥é”
+    boost::condition_variable the_condition_variable;            //boostæ¡ä»¶å˜é‡
 
 public:
 
-	//´æÈëĞÂµÄÈÎÎñ
-	void push(Data const& data)
-	{
-		mutex::scoped_lock lock(the_mutex);				//»ñÈ¡»¥³âËø
-		the_queue.push(data);							//Ïò¶ÓÁĞÖĞ´æÈëÊı¾İ
-		lock.unlock();									//ÊÍ·ÅËø
-		the_condition_variable.notify_one();			//Í¨ÖªÕıÔÚ×èÈûµÈ´ıµÄÏß³Ì
-	}
+    //å­˜å…¥æ–°çš„ä»»åŠ¡
+    void push(Data const &data) {
+        boost::mutex::scoped_lock lock(the_mutex);            //è·å–äº’æ–¥é”
+        the_queue.push(data);                            //å‘é˜Ÿåˆ—ä¸­å­˜å…¥æ•°æ®
+        lock.unlock();                                        //é‡Šæ”¾é”
+        the_condition_variable.notify_one();            //é€šçŸ¥æ­£åœ¨é˜»å¡ç­‰å¾…çš„çº¿ç¨‹
+    }
 
-	//¼ì²é¶ÓÁĞÊÇ·ñÎª¿Õ
-	bool empty() const
-	{
-		mutex::scoped_lock lock(the_mutex);
-		return the_queue.empty();
-	}
+    //æ£€æŸ¥é˜Ÿåˆ—æ˜¯å¦ä¸ºç©º
+    bool empty() const {
+        boost::mutex::scoped_lock lock(the_mutex);
+        return the_queue.empty();
+    }
 
-	//È¡³ö
-	Data wait_and_pop()
-	{
-		mutex::scoped_lock lock(the_mutex);
+    //å–å‡º
+    Data wait_and_pop() {
+        boost::mutex::scoped_lock lock(the_mutex);
 
-		while (the_queue.empty())						//µ±¶ÓÁĞÎª¿ÕÊ±
-		{
-			the_condition_variable.wait(lock);			//µÈ´ıÌõ¼ş±äÁ¿Í¨Öª
-		}
+        while (the_queue.empty())                        //å½“é˜Ÿåˆ—ä¸ºç©ºæ—¶
+        {
+            the_condition_variable.wait(lock);            //ç­‰å¾…æ¡ä»¶å˜é‡é€šçŸ¥
+        }
 
-		Data popped_value = the_queue.front();			//»ñÈ¡¶ÓÁĞÖĞµÄ×îºóÒ»¸öÈÎÎñ
-		the_queue.pop();								//É¾³ı¸ÃÈÎÎñ
-		return popped_value;							//·µ»Ø¸ÃÈÎÎñ
-	}
+        Data popped_value = the_queue.front();            //è·å–é˜Ÿåˆ—ä¸­çš„æœ€åä¸€ä¸ªä»»åŠ¡
+        the_queue.pop();                                //åˆ é™¤è¯¥ä»»åŠ¡
+        return popped_value;                            //è¿”å›è¯¥ä»»åŠ¡
+    }
 
 };
 
@@ -181,7 +174,7 @@ void getNestedDictChar2(dict d, string key1, string key2, string key3, char *val
 
 void getNestedDictValue2(dict d, string key1, string key2, string key3, int *value, int index);
 
-//´Ó×ÖµäÖĞ»ñÈ¡Ä³¸ö½¨Öµ¶ÔÓ¦µÄÕûÊı£¬²¢¸³Öµµ½ÇëÇó½á¹¹Ìå¶ÔÏóµÄÖµÉÏ
+//ä»å­—å…¸ä¸­è·å–æŸä¸ªå»ºå€¼å¯¹åº”çš„æ•´æ•°ï¼Œå¹¶èµ‹å€¼åˆ°è¯·æ±‚ç»“æ„ä½“å¯¹è±¡çš„å€¼ä¸Š
 void getInt(dict d, string key, int *value);
 
 void getUint64(dict d, string key, uint64_t *value);
@@ -191,722 +184,789 @@ void getUint32(dict d, string key, uint32_t *value);
 void getInt64(dict d, string key, int64_t *value);
 
 
-//´Ó×ÖµäÖĞ»ñÈ¡Ä³¸ö½¨Öµ¶ÔÓ¦µÄ¸¡µãÊı£¬²¢¸³Öµµ½ÇëÇó½á¹¹Ìå¶ÔÏóµÄÖµÉÏ
-void getDouble(dict d, string key, double* value);
+//ä»å­—å…¸ä¸­è·å–æŸä¸ªå»ºå€¼å¯¹åº”çš„æµ®ç‚¹æ•°ï¼Œå¹¶èµ‹å€¼åˆ°è¯·æ±‚ç»“æ„ä½“å¯¹è±¡çš„å€¼ä¸Š
+void getDouble(dict d, string key, double *value);
 
 
-//´Ó×ÖµäÖĞ»ñÈ¡Ä³¸ö½¨Öµ¶ÔÓ¦µÄ×Ö·û£¬²¢¸³Öµµ½ÇëÇó½á¹¹Ìå¶ÔÏóµÄÖµÉÏ
-void getChar(dict d, string key, char* value);
+//ä»å­—å…¸ä¸­è·å–æŸä¸ªå»ºå€¼å¯¹åº”çš„å­—ç¬¦ï¼Œå¹¶èµ‹å€¼åˆ°è¯·æ±‚ç»“æ„ä½“å¯¹è±¡çš„å€¼ä¸Š
+void getChar(dict d, string key, char *value);
 
 
-//´Ó×ÖµäÖĞ»ñÈ¡Ä³¸ö½¨Öµ¶ÔÓ¦µÄ×Ö·û´®£¬²¢¸³Öµµ½ÇëÇó½á¹¹Ìå¶ÔÏóµÄÖµÉÏ
-void getStr(dict d, string key, char* value);
+//ä»å­—å…¸ä¸­è·å–æŸä¸ªå»ºå€¼å¯¹åº”çš„å­—ç¬¦ä¸²ï¼Œå¹¶èµ‹å€¼åˆ°è¯·æ±‚ç»“æ„ä½“å¯¹è±¡çš„å€¼ä¸Š
+void getStr(dict d, string key, char *value);
 
 
 ///-------------------------------------------------------------------------------------
-///C++ SPIµÄ»Øµ÷º¯Êı·½·¨ÊµÏÖ
+///C++ SPIçš„å›è°ƒå‡½æ•°æ–¹æ³•å®ç°
 ///-------------------------------------------------------------------------------------
 
-//APIµÄ¼Ì³ĞÊµÏÖ
-class TraderApi : public XTP::API::TraderSpi
-{
+//APIçš„ç»§æ‰¿å®ç°
+class TraderApi : public XTP::API::TraderSpi {
 private:
-	XTP::API::TraderApi* api;			//API¶ÔÏó
-	thread *task_thread;				//¹¤×÷Ïß³ÌÖ¸Õë£¨ÏòpythonÖĞÍÆËÍÊı¾İ£©
-	ConcurrentQueue<Task*> task_queue;	//ÈÎÎñ¶ÓÁĞ
+    XTP::API::TraderApi *api;            //APIå¯¹è±¡
+    boost::thread *task_thread;                //å·¥ä½œçº¿ç¨‹æŒ‡é’ˆï¼ˆå‘pythonä¸­æ¨é€æ•°æ®ï¼‰
+    ConcurrentQueue<Task *> task_queue;    //ä»»åŠ¡é˜Ÿåˆ—
 
 public:
-	TraderApi()
-	{
-		function0<void> f = boost::bind(&TraderApi::processTask, this);
-		thread t(f);
-		this->task_thread = &t;
-	};
-
-	~TraderApi()
-	{
-	};
-
-	//-------------------------------------------------------------------------------------
-	//API»Øµ÷º¯Êı
-	//-------------------------------------------------------------------------------------
-
-	///µ±¿Í»§¶ËµÄÄ³¸öÁ¬½ÓÓë½»Ò×ºóÌ¨Í¨ĞÅÁ¬½Ó¶Ï¿ªÊ±£¬¸Ã·½·¨±»µ÷ÓÃ¡£
-	///@param reason ´íÎóÔ­Òò£¬ÇëÓë´íÎó´úÂë±í¶ÔÓ¦
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark ÓÃ»§Ö÷¶¯µ÷ÓÃlogoutµ¼ÖÂµÄ¶ÏÏß£¬²»»á´¥·¢´Ëº¯Êı¡£api²»»á×Ô¶¯ÖØÁ¬£¬µ±¶ÏÏß·¢ÉúÊ±£¬ÇëÓÃ»§×ÔĞĞÑ¡ÔñºóĞø²Ù×÷£¬¿ÉÒÔÔÚ´Ëº¯ÊıÖĞµ÷ÓÃLoginÖØĞÂµÇÂ¼£¬²¢¸üĞÂsession_id£¬´ËÊ±ÓÃ»§ÊÕµ½µÄÊı¾İ¸ú¶ÏÏßÖ®Ç°ÊÇÁ¬ĞøµÄ
-	virtual void OnDisconnected(uint64_t session_id, int reason) ;
-
-	///´íÎóÓ¦´ğ
-	///@param error_info µ±·şÎñÆ÷ÏìÓ¦·¢Éú´íÎóÊ±µÄ¾ßÌåµÄ´íÎó´úÂëºÍ´íÎóĞÅÏ¢,µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@remark ´Ëº¯ÊıÖ»ÓĞÔÚ·şÎñÆ÷·¢Éú´íÎóÊ±²Å»áµ÷ÓÃ£¬Ò»°ãÎŞĞèÓÃ»§´¦Àí
-	virtual void OnError(XTPRI *error_info) ;
-
-	///±¨µ¥Í¨Öª
-	///@param order_info ¶©µ¥ÏìÓ¦¾ßÌåĞÅÏ¢£¬ÓÃ»§¿ÉÒÔÍ¨¹ıorder_info.order_xtp_idÀ´¹ÜÀí¶©µ¥£¬Í¨¹ıGetClientIDByXTPID() == client_idÀ´¹ıÂË×Ô¼ºµÄ¶©µ¥£¬order_info.qty_left×Ö¶ÎÔÚ¶©µ¥ÎªÎ´³É½»¡¢²¿³É¡¢È«³É¡¢·Ïµ¥×´Ì¬Ê±£¬±íÊ¾´Ë¶©µ¥»¹Ã»ÓĞ³É½»µÄÊıÁ¿£¬ÔÚ²¿³·¡¢È«³·×´Ì¬Ê±£¬±íÊ¾´Ë¶©µ¥±»³·µÄÊıÁ¿¡£order_info.order_cancel_xtp_idÎªÆäËù¶ÔÓ¦µÄ³·µ¥ID£¬²»Îª0Ê±±íÊ¾´Ëµ¥±»³·³É¹¦
-	///@param error_info ¶©µ¥±»¾Ü¾ø»òÕß·¢Éú´íÎóÊ±´íÎó´úÂëºÍ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@remark Ã¿´Î¶©µ¥×´Ì¬¸üĞÂÊ±£¬¶¼»á±»µ÷ÓÃ£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß£¬ÔÚ¶©µ¥Î´³É½»¡¢È«²¿³É½»¡¢È«²¿³·µ¥¡¢²¿·Ö³·µ¥¡¢ÒÑ¾Ü¾øÕâĞ©×´Ì¬Ê±»áÓĞÏìÓ¦£¬¶ÔÓÚ²¿·Ö³É½»µÄÇé¿ö£¬ÇëÓÉ¶©µ¥µÄ³É½»»Ø±¨À´×ÔĞĞÈ·ÈÏ¡£ËùÓĞµÇÂ¼ÁË´ËÓÃ»§µÄ¿Í»§¶Ë¶¼½«ÊÕµ½´ËÓÃ»§µÄ¶©µ¥ÏìÓ¦
-	virtual void OnOrderEvent(XTPOrderInfo *order_info, XTPRI *error_info, uint64_t session_id) ;
-
-	///³É½»Í¨Öª
-	///@param trade_info ³É½»»Ø±¨µÄ¾ßÌåĞÅÏ¢£¬ÓÃ»§¿ÉÒÔÍ¨¹ıtrade_info.order_xtp_idÀ´¹ÜÀí¶©µ¥£¬Í¨¹ıGetClientIDByXTPID() == client_idÀ´¹ıÂË×Ô¼ºµÄ¶©µ¥¡£¶ÔÓÚÉÏ½»Ëù£¬exec_id¿ÉÒÔÎ¨Ò»±êÊ¶Ò»±Ê³É½»¡£µ±·¢ÏÖ2±Ê³É½»»Ø±¨ÓµÓĞÏàÍ¬µÄexec_id£¬Ôò¿ÉÒÔÈÏÎª´Ë±Ê½»Ò××Ô³É½»ÁË¡£¶ÔÓÚÉî½»Ëù£¬exec_idÊÇÎ¨Ò»µÄ£¬ÔİÊ±ÎŞ´ËÅĞ¶Ï»úÖÆ¡£report_index+market×Ö¶Î¿ÉÒÔ×é³ÉÎ¨Ò»±êÊ¶±íÊ¾³É½»»Ø±¨¡£
-	///@remark ¶©µ¥ÓĞ³É½»·¢ÉúµÄÊ±ºò£¬»á±»µ÷ÓÃ£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß¡£ËùÓĞµÇÂ¼ÁË´ËÓÃ»§µÄ¿Í»§¶Ë¶¼½«ÊÕµ½´ËÓÃ»§µÄ³É½»»Ø±¨¡£Ïà¹Ø¶©µ¥Îª²¿³É×´Ì¬£¬ĞèÒªÓÃ»§Í¨¹ı³É½»»Ø±¨µÄ³É½»ÊıÁ¿À´È·¶¨£¬OnOrderEvent()²»»áÍÆËÍ²¿³É×´Ì¬¡£
-	virtual void OnTradeEvent(XTPTradeReport *trade_info, uint64_t session_id) ;
-
-	///³·µ¥³ö´íÏìÓ¦
-	///@param cancel_info ³·µ¥¾ßÌåĞÅÏ¢£¬°üÀ¨³·µ¥µÄorder_cancel_xtp_idºÍ´ı³·µ¥µÄorder_xtp_id
-	///@param error_info ³·µ¥±»¾Ü¾ø»òÕß·¢Éú´íÎóÊ±´íÎó´úÂëºÍ´íÎóĞÅÏ¢£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@remark ´ËÏìÓ¦Ö»»áÔÚ³·µ¥·¢Éú´íÎóÊ±±»»Øµ÷
-	virtual void OnCancelOrderError(XTPOrderCancelInfo *cancel_info, XTPRI *error_info, uint64_t session_id) ;
-
-	///ÇëÇó²éÑ¯±¨µ¥ÏìÓ¦
-	///@param order_info ²éÑ¯µ½µÄÒ»¸ö±¨µ¥
-	///@param error_info ²éÑ¯±¨µ¥Ê±·¢Éú´íÎóÊ±£¬·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@remark ÓÉÓÚÖ§³Ö·ÖÊ±¶Î²éÑ¯£¬Ò»¸ö²éÑ¯ÇëÇó¿ÉÄÜ¶ÔÓ¦¶à¸öÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnQueryOrder(XTPQueryOrderRsp *order_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id) ;
-
-	///·ÖÒ³ÇëÇó²éÑ¯±¨µ¥ÏìÓ¦
-	///@param order_info ²éÑ¯µ½µÄÒ»¸ö±¨µ¥
-	///@param req_count ·ÖÒ³ÇëÇóµÄ×î´óÊıÁ¿
-	///@param order_sequence ·ÖÒ³ÇëÇóµÄµ±Ç°»Ø±¨ÊıÁ¿
-	///@param query_reference µ±Ç°±¨µ¥ĞÅÏ¢Ëù¶ÔÓ¦µÄ²éÑ¯Ë÷Òı£¬ĞèÒª¼ÇÂ¼ÏÂÀ´£¬ÔÚ½øĞĞÏÂÒ»´Î·ÖÒ³²éÑ¯µÄÊ±ºòĞèÒªÓÃµ½
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark µ±order_sequenceÎª0£¬±íÃ÷µ±´Î²éÑ¯Ã»ÓĞ²éµ½ÈÎºÎ¼ÇÂ¼£¬µ±is_lastÎªtrueÊ±£¬Èç¹ûorder_sequenceµÈÓÚreq_count£¬ÄÇÃ´±íÊ¾»¹ÓĞ±¨µ¥£¬¿ÉÒÔ½øĞĞÏÂÒ»´Î·ÖÒ³²éÑ¯£¬Èç¹û²»µÈ£¬±íÊ¾ËùÓĞ±¨µ¥ÒÑ¾­²éÑ¯Íê±Ï¡£Ò»¸ö²éÑ¯ÇëÇó¿ÉÄÜ¶ÔÓ¦¶à¸öÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß¡£
-	virtual void OnQueryOrderByPage(XTPQueryOrderRsp *order_info, int64_t req_count, int64_t order_sequence, int64_t query_reference, int request_id, bool is_last, uint64_t session_id);
-
-
-	///ÇëÇó²éÑ¯³É½»ÏìÓ¦
-	///@param trade_info ²éÑ¯µ½µÄÒ»¸ö³É½»»Ø±¨
-	///@param error_info ²éÑ¯³É½»»Ø±¨·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@remark ÓÉÓÚÖ§³Ö·ÖÊ±¶Î²éÑ¯£¬Ò»¸ö²éÑ¯ÇëÇó¿ÉÄÜ¶ÔÓ¦¶à¸öÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnQueryTrade(XTPQueryTradeRsp *trade_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id) ;
-
-	///·ÖÒ³ÇëÇó²éÑ¯³É½»ÏìÓ¦
-	///@param trade_info ²éÑ¯µ½µÄÒ»¸ö³É½»ĞÅÏ¢
-	///@param req_count ·ÖÒ³ÇëÇóµÄ×î´óÊıÁ¿
-	///@param trade_sequence ·ÖÒ³ÇëÇóµÄµ±Ç°»Ø±¨ÊıÁ¿
-	///@param query_reference µ±Ç°±¨µ¥ĞÅÏ¢Ëù¶ÔÓ¦µÄ²éÑ¯Ë÷Òı£¬ĞèÒª¼ÇÂ¼ÏÂÀ´£¬ÔÚ½øĞĞÏÂÒ»´Î·ÖÒ³²éÑ¯µÄÊ±ºòĞèÒªÓÃµ½
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark µ±trade_sequenceÎª0£¬±íÃ÷µ±´Î²éÑ¯Ã»ÓĞ²éµ½ÈÎºÎ¼ÇÂ¼£¬µ±is_lastÎªtrueÊ±£¬Èç¹ûtrade_sequenceµÈÓÚreq_count£¬ÄÇÃ´±íÊ¾»¹ÓĞ»Ø±¨£¬¿ÉÒÔ½øĞĞÏÂÒ»´Î·ÖÒ³²éÑ¯£¬Èç¹û²»µÈ£¬±íÊ¾ËùÓĞ»Ø±¨ÒÑ¾­²éÑ¯Íê±Ï¡£Ò»¸ö²éÑ¯ÇëÇó¿ÉÄÜ¶ÔÓ¦¶à¸öÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß¡£
-	virtual void OnQueryTradeByPage(XTPQueryTradeRsp *trade_info, int64_t req_count, int64_t trade_sequence, int64_t query_reference, int request_id, bool is_last, uint64_t session_id);
-
-	///ÇëÇó²éÑ¯Í¶×ÊÕß³Ö²ÖÏìÓ¦
-	///@param position ²éÑ¯µ½µÄÒ»Ö»¹ÉÆ±µÄ³Ö²ÖÇé¿ö
-	///@param error_info ²éÑ¯ÕË»§³Ö²Ö·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@remark ÓÉÓÚÓÃ»§¿ÉÄÜ³ÖÓĞ¶à¸ö¹ÉÆ±£¬Ò»¸ö²éÑ¯ÇëÇó¿ÉÄÜ¶ÔÓ¦¶à¸öÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnQueryPosition(XTPQueryStkPositionRsp *position, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id) ;
-
-	///ÇëÇó²éÑ¯×Ê½ğÕË»§ÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	///@param asset ²éÑ¯µ½µÄ×Ê½ğÕË»§Çé¿ö
-	///@param error_info ²éÑ¯×Ê½ğÕË»§·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@remark ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnQueryAsset(XTPQueryAssetRsp *asset, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id) ;
-
-
-	///ÇëÇó²éÑ¯·Ö¼¶»ù½ğĞÅÏ¢ÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	///@param fund_info ²éÑ¯µ½µÄ·Ö¼¶»ù½ğÇé¿ö
-	///@param error_info ²éÑ¯·Ö¼¶»ù½ğ·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@remark ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnQueryStructuredFund(XTPStructuredFundInfo *fund_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
-
-	///ÇëÇó²éÑ¯×Ê½ğ»®²¦¶©µ¥ÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	///@param fund_transfer_info ²éÑ¯µ½µÄ×Ê½ğÕË»§Çé¿ö
-	///@param error_info ²éÑ¯×Ê½ğÕË»§·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@remark ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnQueryFundTransfer(XTPFundTransferNotice *fund_transfer_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
-
-	///×Ê½ğ»®²¦Í¨Öª
-	///@param fund_transfer_info ×Ê½ğ»®²¦Í¨ÖªµÄ¾ßÌåĞÅÏ¢£¬ÓÃ»§¿ÉÒÔÍ¨¹ıfund_transfer_info.serial_idÀ´¹ÜÀí¶©µ¥£¬Í¨¹ıGetClientIDByXTPID() == client_idÀ´¹ıÂË×Ô¼ºµÄ¶©µ¥¡£
-	///@param error_info ×Ê½ğ»®²¦¶©µ¥±»¾Ü¾ø»òÕß·¢Éú´íÎóÊ±´íÎó´úÂëºÍ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@remark µ±×Ê½ğ»®²¦¶©µ¥ÓĞ×´Ì¬±ä»¯µÄÊ±ºò£¬»á±»µ÷ÓÃ£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß¡£ËùÓĞµÇÂ¼ÁË´ËÓÃ»§µÄ¿Í»§¶Ë¶¼½«ÊÕµ½´ËÓÃ»§µÄ×Ê½ğ»®²¦Í¨Öª¡£
-	virtual void OnFundTransfer(XTPFundTransferNotice *fund_transfer_info, XTPRI *error_info, uint64_t session_id);
-
-	///ÇëÇó²éÑ¯ETFÇåµ¥ÎÄ¼şµÄÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	///@param etf_info ²éÑ¯µ½µÄETFÇåµ¥ÎÄ¼şÇé¿ö
-	///@param error_info ²éÑ¯ETFÇåµ¥ÎÄ¼ş·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@remark ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnQueryETF(XTPQueryETFBaseRsp *etf_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
-
-	///ÇëÇó²éÑ¯ETF¹ÉÆ±ÀºµÄÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	///@param etf_component_info ²éÑ¯µ½µÄETFºÏÔ¼µÄÏà¹Ø³É·Ö¹ÉĞÅÏ¢
-	///@param error_info ²éÑ¯ETF¹ÉÆ±Àº·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@remark ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnQueryETFBasket(XTPQueryETFComponentRsp *etf_component_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
-
-	///ÇëÇó²éÑ¯½ñÈÕĞÂ¹ÉÉê¹ºĞÅÏ¢ÁĞ±íµÄÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	///@param ipo_info ²éÑ¯µ½µÄ½ñÈÕĞÂ¹ÉÉê¹ºµÄÒ»Ö»¹ÉÆ±ĞÅÏ¢
-	///@param error_info ²éÑ¯½ñÈÕĞÂ¹ÉÉê¹ºĞÅÏ¢ÁĞ±í·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@remark ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnQueryIPOInfoList(XTPQueryIPOTickerRsp *ipo_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
-
-	///ÇëÇó²éÑ¯ÓÃ»§ĞÂ¹ÉÉê¹º¶î¶ÈĞÅÏ¢µÄÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	///@param quota_info ²éÑ¯µ½µÄÓÃ»§Ä³¸öÊĞ³¡µÄ½ñÈÕĞÂ¹ÉÉê¹º¶î¶ÈĞÅÏ¢
-	///@param error_info ²é²éÑ¯ÓÃ»§ĞÂ¹ÉÉê¹º¶î¶ÈĞÅÏ¢·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@remark ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnQueryIPOQuotaInfo(XTPQueryIPOQuotaRsp *quota_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
-
-
-
-
-	///ÇëÇó²éÑ¯ÆÚÈ¨ºÏÔ¼µÄÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	///@param option_info ²éÑ¯µ½µÄÆÚÈ¨ºÏÔ¼Çé¿ö
-	///@param error_info ²éÑ¯ÆÚÈ¨ºÏÔ¼·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@remark ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnQueryOptionAuctionInfo(XTPQueryOptionAuctionInfoRsp *option_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
-
-	///ÈÚ×ÊÈÚÈ¯ÒµÎñÖĞÏÖ½ğÖ±½Ó»¹¿îµÄÏìÓ¦
-	///@param cash_repay_info ÏÖ½ğÖ±½Ó»¹¿îÍ¨ÖªµÄ¾ßÌåĞÅÏ¢£¬ÓÃ»§¿ÉÒÔÍ¨¹ıcash_repay_info.xtp_idÀ´¹ÜÀí¶©µ¥£¬Í¨¹ıGetClientIDByXTPID() == client_idÀ´¹ıÂË×Ô¼ºµÄ¶©µ¥¡£
-	///@param error_info ÏÖ½ğ»¹¿î·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnCreditCashRepay(XTPCrdCashRepayRsp *cash_repay_info, XTPRI *error_info, uint64_t session_id);
-
-	///ÈÚ×ÊÈÚÈ¯ÒµÎñÖĞÏÖ½ğ»¹Ï¢µÄÏìÓ¦
-	///@param cash_repay_info ÏÖ½ğ»¹Ï¢Í¨ÖªµÄ¾ßÌåĞÅÏ¢£¬ÓÃ»§¿ÉÒÔÍ¨¹ıcash_repay_info.xtp_idÀ´¹ÜÀí¶©µ¥£¬Í¨¹ıGetClientIDByXTPID() == client_idÀ´¹ıÂË×Ô¼ºµÄ¶©µ¥¡£
-	///@param error_info ÏÖ½ğ»¹Ï¢·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnCreditCashRepayDebtInterestFee(XTPCrdCashRepayDebtInterestFeeRsp *cash_repay_info, XTPRI *error_info, uint64_t session_id);
-
-	///ÇëÇó²éÑ¯ÈÚ×ÊÈÚÈ¯ÒµÎñÖĞµÄÏÖ½ğÖ±½Ó»¹¿î±¨µ¥µÄÏìÓ¦
-	///@param cash_repay_info ²éÑ¯µ½µÄÄ³Ò»±ÊÏÖ½ğÖ±½Ó»¹¿îÍ¨ÖªµÄ¾ßÌåĞÅÏ¢
-	///@param error_info ²éÑ¯ÏÖ½ğÖ±½Ó±¨µ¥·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnQueryCreditCashRepayInfo(XTPCrdCashRepayInfo *cash_repay_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
-
-	///ÇëÇó²éÑ¯ĞÅÓÃÕË»§¶îÍâĞÅÏ¢µÄÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	///@param fund_info ²éÑ¯µ½µÄĞÅÓÃÕË»§¶îÍâĞÅÏ¢Çé¿ö
-	///@param error_info ²éÑ¯ĞÅÓÃÕË»§¶îÍâĞÅÏ¢·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnQueryCreditFundInfo(XTPCrdFundInfo *fund_info, XTPRI *error_info, int request_id, uint64_t session_id) ;
-
-	///ÇëÇó²éÑ¯ĞÅÓÃÕË»§¸ºÕ®ĞÅÏ¢µÄÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	///@param debt_info ²éÑ¯µ½µÄĞÅÓÃÕË»§ºÏÔ¼¸ºÕ®Çé¿ö
-	///@param error_info ²éÑ¯ĞÅÓÃÕË»§¸ºÕ®ĞÅÏ¢·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnQueryCreditDebtInfo(XTPCrdDebtInfo *debt_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id) ;
-
-	///ÇëÇó²éÑ¯ĞÅÓÃÕË»§Ö¸¶¨Ö¤È¯¸ºÕ®Î´»¹ĞÅÏ¢ÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	///@param debt_info ²éÑ¯µ½µÄĞÅÓÃÕË»§Ö¸¶¨Ö¤È¯¸ºÕ®Î´»¹ĞÅÏ¢Çé¿ö
-	///@param error_info ²éÑ¯ĞÅÓÃÕË»§Ö¸¶¨Ö¤È¯¸ºÕ®Î´»¹ĞÅÏ¢·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnQueryCreditTickerDebtInfo(XTPCrdDebtStockInfo *debt_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
-
-	///ÇëÇó²éÑ¯ĞÅÓÃÕË»§´ı»¹×Ê½ğµÄÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	///@param remain_amount ²éÑ¯µ½µÄĞÅÓÃÕË»§´ı»¹×Ê½ğ
-	///@param error_info ²éÑ¯ĞÅÓÃÕË»§´ı»¹×Ê½ğ·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnQueryCreditAssetDebtInfo(double remain_amount, XTPRI *error_info, int request_id, uint64_t session_id);
-
-	///ÇëÇó²éÑ¯ĞÅÓÃÕË»§¿ÉÈÚÈ¯Í·´çĞÅÏ¢µÄÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	///@param assign_info ²éÑ¯µ½µÄĞÅÓÃÕË»§¿ÉÈÚÈ¯Í·´çĞÅÏ¢
-	///@param error_info ²éÑ¯ĞÅÓÃÕË»§¿ÉÈÚÈ¯Í·´çĞÅÏ¢·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnQueryCreditTickerAssignInfo(XTPClientQueryCrdPositionStkInfo *assign_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
-
-	///ÈÚ×ÊÈÚÈ¯ÒµÎñÖĞÇëÇó²éÑ¯Ö¸¶¨ÓàÈ¯ĞÅÏ¢µÄÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	///@param stock_info ²éÑ¯µ½µÄÓàÈ¯ĞÅÏ¢
-	///@param error_info ²éÑ¯ĞÅÓÃÕË»§ÓàÈ¯ĞÅÏ¢·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnQueryCreditExcessStock(XTPClientQueryCrdSurplusStkRspInfo* stock_info, XTPRI *error_info, int request_id, uint64_t session_id);
-
-	///ÈÚ×ÊÈÚÈ¯ÒµÎñÖĞÇëÇó²éÑ¯ÓàÈ¯ĞÅÏ¢µÄÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	///@param stock_info ²éÑ¯µ½µÄÓàÈ¯ĞÅÏ¢
-	///@param error_info ²éÑ¯ĞÅÓÃÕË»§ÓàÈ¯ĞÅÏ¢·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@remark ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnQueryMulCreditExcessStock(XTPClientQueryCrdSurplusStkRspInfo* stock_info, XTPRI *error_info, int request_id, uint64_t session_id, bool is_last);
-
-	///ÈÚ×ÊÈÚÈ¯ÒµÎñÖĞ¸ºÕ®ºÏÔ¼Õ¹ÆÚµÄÍ¨Öª
-	///@param debt_extend_info ¸ºÕ®ºÏÔ¼Õ¹ÆÚÍ¨ÖªµÄ¾ßÌåĞÅÏ¢£¬ÓÃ»§¿ÉÒÔÍ¨¹ıdebt_extend_info.xtpidÀ´¹ÜÀí¶©µ¥£¬Í¨¹ıGetClientIDByXTPID() == client_idÀ´¹ıÂË×Ô¼ºµÄ¶©µ¥¡£
-	///@param error_info ¸ºÕ®ºÏÔ¼Õ¹ÆÚ¶©µ¥±»¾Ü¾ø»òÕß·¢Éú´íÎóÊ±´íÎó´úÂëºÍ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó¡£
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark µ±¸ºÕ®ºÏÔ¼Õ¹ÆÚ¶©µ¥ÓĞ×´Ì¬±ä»¯µÄÊ±ºò£¬»á±»µ÷ÓÃ£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß¡£ËùÓĞµÇÂ¼ÁË´ËÓÃ»§µÄ¿Í»§¶Ë¶¼½«ÊÕµ½´ËÓÃ»§µÄ¸ºÕ®ºÏÔ¼Õ¹ÆÚÍ¨Öª¡£
-	virtual void OnCreditExtendDebtDate(XTPCreditDebtExtendNotice *debt_extend_info, XTPRI *error_info, uint64_t session_id);
-
-	///²éÑ¯ÈÚ×ÊÈÚÈ¯ÒµÎñÖĞ¸ºÕ®ºÏÔ¼Õ¹ÆÚ¶©µ¥ÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	///@param debt_extend_info ²éÑ¯µ½µÄ¸ºÕ®ºÏÔ¼Õ¹ÆÚÇé¿ö
-	///@param error_info ²éÑ¯¸ºÕ®ºÏÔ¼Õ¹ÆÚ·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó¡£µ±error_info.error_id=11000350Ê±£¬±íÃ÷Ã»ÓĞ¼ÇÂ¼£¬µ±ÎªÆäËû·Ç0ÖµÊ±£¬±íÃ÷ºÏÔ¼·¢Éú¾Üµ¥Ê±µÄ´íÎóÔ­Òò
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnQueryCreditExtendDebtDateOrders(XTPCreditDebtExtendNotice *debt_extend_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
-
-	///²éÑ¯ÈÚ×ÊÈÚÈ¯ÒµÎñÖĞĞÅÓÃÕË»§¸½¼ÓĞÅÏ¢µÄÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	///@param fund_info ĞÅÓÃÕË»§¸½¼ÓĞÅÏ¢
-	///@param error_info ²éÑ¯ĞÅÓÃÕË»§¸½¼ÓĞÅÏ¢·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnQueryCreditFundExtraInfo(XTPCrdFundExtraInfo *fund_info, XTPRI *error_info, int request_id, uint64_t session_id);
-
-	///²éÑ¯ÈÚ×ÊÈÚÈ¯ÒµÎñÖĞĞÅÓÃÕË»§Ö¸¶¨Ö¤È¯µÄ¸½¼ÓĞÅÏ¢µÄÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	///@param fund_info ĞÅÓÃÕË»§Ö¸¶¨Ö¤È¯µÄ¸½¼ÓĞÅÏ¢
-	///@param error_info ²éÑ¯ĞÅÓÃÕË»§¸½¼ÓĞÅÏ¢·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnQueryCreditPositionExtraInfo(XTPCrdPositionExtraInfo *fund_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
-
-	///ÆÚÈ¨×éºÏ²ßÂÔ±¨µ¥Í¨Öª
-	///@param order_info ¶©µ¥ÏìÓ¦¾ßÌåĞÅÏ¢£¬ÓÃ»§¿ÉÒÔÍ¨¹ıorder_info.order_xtp_idÀ´¹ÜÀí¶©µ¥£¬Í¨¹ıGetClientIDByXTPID() == client_idÀ´¹ıÂË×Ô¼ºµÄ¶©µ¥£¬order_info.qty_left×Ö¶ÎÔÚ¶©µ¥ÎªÎ´³É½»¡¢²¿³É¡¢È«³É¡¢·Ïµ¥×´Ì¬Ê±£¬±íÊ¾´Ë¶©µ¥»¹Ã»ÓĞ³É½»µÄÊıÁ¿£¬ÔÚ²¿³·¡¢È«³·×´Ì¬Ê±£¬±íÊ¾´Ë¶©µ¥±»³·µÄÊıÁ¿¡£order_info.order_cancel_xtp_idÎªÆäËù¶ÔÓ¦µÄ³·µ¥ID£¬²»Îª0Ê±±íÊ¾´Ëµ¥±»³·³É¹¦
-	///@param error_info ¶©µ¥±»¾Ü¾ø»òÕß·¢Éú´íÎóÊ±´íÎó´úÂëºÍ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark Ã¿´Î¶©µ¥×´Ì¬¸üĞÂÊ±£¬¶¼»á±»µ÷ÓÃ£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß£¬ÔÚ¶©µ¥Î´³É½»¡¢È«²¿³É½»¡¢È«²¿³·µ¥¡¢²¿·Ö³·µ¥¡¢ÒÑ¾Ü¾øÕâĞ©×´Ì¬Ê±»áÓĞÏìÓ¦£¬¶ÔÓÚ²¿·Ö³É½»µÄÇé¿ö£¬ÇëÓÉ¶©µ¥µÄ³É½»»Ø±¨À´×ÔĞĞÈ·ÈÏ¡£ËùÓĞµÇÂ¼ÁË´ËÓÃ»§µÄ¿Í»§¶Ë¶¼½«ÊÕµ½´ËÓÃ»§µÄ¶©µ¥ÏìÓ¦
-	virtual void OnOptionCombinedOrderEvent(XTPOptCombOrderInfo *order_info, XTPRI *error_info, uint64_t session_id);
-
-	///ÆÚÈ¨×éºÏ²ßÂÔ³É½»Í¨Öª
-	///@param trade_info ³É½»»Ø±¨µÄ¾ßÌåĞÅÏ¢£¬ÓÃ»§¿ÉÒÔÍ¨¹ıtrade_info.order_xtp_idÀ´¹ÜÀí¶©µ¥£¬Í¨¹ıGetClientIDByXTPID() == client_idÀ´¹ıÂË×Ô¼ºµÄ¶©µ¥¡£¶ÔÓÚÉÏ½»Ëù£¬exec_id¿ÉÒÔÎ¨Ò»±êÊ¶Ò»±Ê³É½»¡£µ±·¢ÏÖ2±Ê³É½»»Ø±¨ÓµÓĞÏàÍ¬µÄexec_id£¬Ôò¿ÉÒÔÈÏÎª´Ë±Ê½»Ò××Ô³É½»ÁË¡£¶ÔÓÚÉî½»Ëù£¬exec_idÊÇÎ¨Ò»µÄ£¬ÔİÊ±ÎŞ´ËÅĞ¶Ï»úÖÆ¡£report_index+market×Ö¶Î¿ÉÒÔ×é³ÉÎ¨Ò»±êÊ¶±íÊ¾³É½»»Ø±¨¡£
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark ¶©µ¥ÓĞ³É½»·¢ÉúµÄÊ±ºò£¬»á±»µ÷ÓÃ£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß¡£ËùÓĞµÇÂ¼ÁË´ËÓÃ»§µÄ¿Í»§¶Ë¶¼½«ÊÕµ½´ËÓÃ»§µÄ³É½»»Ø±¨¡£Ïà¹Ø¶©µ¥Îª²¿³É×´Ì¬£¬ĞèÒªÓÃ»§Í¨¹ı³É½»»Ø±¨µÄ³É½»ÊıÁ¿À´È·¶¨£¬OnOrderEvent()²»»áÍÆËÍ²¿³É×´Ì¬¡£
-	virtual void OnOptionCombinedTradeEvent(XTPOptCombTradeReport *trade_info, uint64_t session_id);
-
-	///ÆÚÈ¨×éºÏ²ßÂÔ³·µ¥³ö´íÏìÓ¦
-	///@param cancel_info ³·µ¥¾ßÌåĞÅÏ¢£¬°üÀ¨³·µ¥µÄorder_cancel_xtp_idºÍ´ı³·µ¥µÄorder_xtp_id
-	///@param error_info ³·µ¥±»¾Ü¾ø»òÕß·¢Éú´íÎóÊ±´íÎó´úÂëºÍ´íÎóĞÅÏ¢£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark ´ËÏìÓ¦Ö»»áÔÚ³·µ¥·¢Éú´íÎóÊ±±»»Øµ÷
-	virtual void OnCancelOptionCombinedOrderError(XTPOptCombOrderCancelInfo *cancel_info, XTPRI *error_info, uint64_t session_id) ;
-
-	///ÇëÇó²éÑ¯ÆÚÈ¨×éºÏ²ßÂÔ±¨µ¥ÏìÓ¦
-	///@param order_info ²éÑ¯µ½µÄÒ»¸ö±¨µ¥
-	///@param error_info ²éÑ¯±¨µ¥Ê±·¢Éú´íÎóÊ±£¬·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark ÓÉÓÚÖ§³Ö·ÖÊ±¶Î²éÑ¯£¬Ò»¸ö²éÑ¯ÇëÇó¿ÉÄÜ¶ÔÓ¦¶à¸öÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß¡£´Ë¶ÔÓ¦µÄÇëÇóº¯Êı²»½¨ÒéÂÖÑ¯Ê¹ÓÃ£¬µ±±¨µ¥Á¿¹ı¶àÊ±£¬ÈİÒ×Ôì³ÉÓÃ»§ÏßÂ·Óµ¶Â£¬µ¼ÖÂapi¶ÏÏß
-	virtual void OnQueryOptionCombinedOrders(XTPQueryOptCombOrderRsp *order_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id) ;
-
-	///·ÖÒ³ÇëÇó²éÑ¯ÆÚÈ¨×éºÏ²ßÂÔ±¨µ¥ÏìÓ¦
-	///@param order_info ²éÑ¯µ½µÄÒ»¸ö±¨µ¥
-	///@param req_count ·ÖÒ³ÇëÇóµÄ×î´óÊıÁ¿
-	///@param order_sequence ·ÖÒ³ÇëÇóµÄµ±Ç°»Ø±¨ÊıÁ¿
-	///@param query_reference µ±Ç°±¨µ¥ĞÅÏ¢Ëù¶ÔÓ¦µÄ²éÑ¯Ë÷Òı£¬ĞèÒª¼ÇÂ¼ÏÂÀ´£¬ÔÚ½øĞĞÏÂÒ»´Î·ÖÒ³²éÑ¯µÄÊ±ºòĞèÒªÓÃµ½
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark µ±order_sequenceÎª0£¬±íÃ÷µ±´Î²éÑ¯Ã»ÓĞ²éµ½ÈÎºÎ¼ÇÂ¼£¬µ±is_lastÎªtrueÊ±£¬Èç¹ûorder_sequenceµÈÓÚreq_count£¬ÄÇÃ´±íÊ¾»¹ÓĞ±¨µ¥£¬¿ÉÒÔ½øĞĞÏÂÒ»´Î·ÖÒ³²éÑ¯£¬Èç¹û²»µÈ£¬±íÊ¾ËùÓĞ±¨µ¥ÒÑ¾­²éÑ¯Íê±Ï¡£Ò»¸ö²éÑ¯ÇëÇó¿ÉÄÜ¶ÔÓ¦¶à¸öÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß¡£
-	virtual void OnQueryOptionCombinedOrdersByPage(XTPQueryOptCombOrderRsp *order_info, int64_t req_count, int64_t order_sequence, int64_t query_reference, int request_id, bool is_last, uint64_t session_id) ;
-
-	///ÇëÇó²éÑ¯ÆÚÈ¨×éºÏ²ßÂÔ³É½»ÏìÓ¦
-	///@param trade_info ²éÑ¯µ½µÄÒ»¸ö³É½»»Ø±¨
-	///@param error_info ²éÑ¯³É½»»Ø±¨·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark ÓÉÓÚÖ§³Ö·ÖÊ±¶Î²éÑ¯£¬Ò»¸ö²éÑ¯ÇëÇó¿ÉÄÜ¶ÔÓ¦¶à¸öÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß¡£´Ë¶ÔÓ¦µÄÇëÇóº¯Êı²»½¨ÒéÂÖÑ¯Ê¹ÓÃ£¬µ±±¨µ¥Á¿¹ı¶àÊ±£¬ÈİÒ×Ôì³ÉÓÃ»§ÏßÂ·Óµ¶Â£¬µ¼ÖÂapi¶ÏÏß
-	virtual void OnQueryOptionCombinedTrades(XTPQueryOptCombTradeRsp *trade_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id) ;
-
-	///·ÖÒ³ÇëÇó²éÑ¯ÆÚÈ¨×éºÏ²ßÂÔ³É½»ÏìÓ¦
-	///@param trade_info ²éÑ¯µ½µÄÒ»¸ö³É½»ĞÅÏ¢
-	///@param req_count ·ÖÒ³ÇëÇóµÄ×î´óÊıÁ¿
-	///@param trade_sequence ·ÖÒ³ÇëÇóµÄµ±Ç°»Ø±¨ÊıÁ¿
-	///@param query_reference µ±Ç°±¨µ¥ĞÅÏ¢Ëù¶ÔÓ¦µÄ²éÑ¯Ë÷Òı£¬ĞèÒª¼ÇÂ¼ÏÂÀ´£¬ÔÚ½øĞĞÏÂÒ»´Î·ÖÒ³²éÑ¯µÄÊ±ºòĞèÒªÓÃµ½
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark µ±trade_sequenceÎª0£¬±íÃ÷µ±´Î²éÑ¯Ã»ÓĞ²éµ½ÈÎºÎ¼ÇÂ¼£¬µ±is_lastÎªtrueÊ±£¬Èç¹ûtrade_sequenceµÈÓÚreq_count£¬ÄÇÃ´±íÊ¾»¹ÓĞ»Ø±¨£¬¿ÉÒÔ½øĞĞÏÂÒ»´Î·ÖÒ³²éÑ¯£¬Èç¹û²»µÈ£¬±íÊ¾ËùÓĞ»Ø±¨ÒÑ¾­²éÑ¯Íê±Ï¡£Ò»¸ö²éÑ¯ÇëÇó¿ÉÄÜ¶ÔÓ¦¶à¸öÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß¡£
-	virtual void OnQueryOptionCombinedTradesByPage(XTPQueryOptCombTradeRsp *trade_info, int64_t req_count, int64_t trade_sequence, int64_t query_reference, int request_id, bool is_last, uint64_t session_id);
-
-	///ÇëÇó²éÑ¯ÆÚÈ¨×éºÏ²ßÂÔ³Ö²ÖÏìÓ¦
-	///@param position_info ²éÑ¯µ½µÄÒ»¸ö³Ö²ÖĞÅÏ¢
-	///@param error_info ²éÑ¯³Ö²Ö·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark Ò»¸ö²éÑ¯ÇëÇó¿ÉÄÜ¶ÔÓ¦¶à¸öÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß¡£
-	virtual void OnQueryOptionCombinedPosition(XTPQueryOptCombPositionRsp *position_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
-
-	///ÇëÇó²éÑ¯ÆÚÈ¨×éºÏ²ßÂÔĞÅÏ¢ÏìÓ¦
-	///@param strategy_info ²éÑ¯µ½µÄÒ»¸ö×éºÏ²ßÂÔĞÅÏ¢
-	///@param error_info ²éÑ¯³É½»»Ø±¨·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark Ò»¸ö²éÑ¯ÇëÇó¿ÉÄÜ¶ÔÓ¦¶à¸öÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß¡£
-	virtual void OnQueryOptionCombinedStrategyInfo(XTPQueryCombineStrategyInfoRsp *strategy_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
-
-	///²éÑ¯ÆÚÈ¨ĞĞÈ¨ºÏ²¢Í·´çµÄÏìÓ¦
-	///@param position_info ²éÑ¯µ½µÄÒ»¸öĞĞÈ¨ºÏ²¢Í·´çĞÅÏ¢
-	///@param error_info ²éÑ¯³Ö²Ö·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param is_last ´ËÏûÏ¢ÏìÓ¦º¯ÊıÊÇ·ñÎªrequest_idÕâÌõÇëÇóËù¶ÔÓ¦µÄ×îºóÒ»¸öÏìÓ¦£¬µ±Îª×îºóÒ»¸öµÄÊ±ºòÎªtrue£¬Èç¹ûÎªfalse£¬±íÊ¾»¹ÓĞÆäËûºóĞøÏûÏ¢ÏìÓ¦
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark Ò»¸ö²éÑ¯ÇëÇó¿ÉÄÜ¶ÔÓ¦¶à¸öÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß¡£
-	virtual void OnQueryOptionCombinedExecPosition(XTPQueryOptCombExecPosRsp *position_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
-
-	///ÇëÇó²éÑ¯ÆäËû½Úµã¿ÉÓÃ×Ê½ğµÄÏìÓ¦£¬ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	///@param fund_info ²éÑ¯µ½µÄÆäËû½Úµã¿ÉÓÃ×Ê½ğÇé¿ö
-	///@param error_info ²éÑ¯ÆäËû½Úµã¿ÉÓÃ×Ê½ğ·¢Éú´íÎóÊ±·µ»ØµÄ´íÎóĞÅÏ¢£¬µ±error_infoÎª¿Õ£¬»òÕßerror_info.error_idÎª0Ê±£¬±íÃ÷Ã»ÓĞ´íÎó
-	///@param request_id ´ËÏûÏ¢ÏìÓ¦º¯Êı¶ÔÓ¦µÄÇëÇóID
-	///@param session_id ×Ê½ğÕË»§¶ÔÓ¦µÄsession_id£¬µÇÂ¼Ê±µÃµ½
-	///@remark ĞèÒª¿ìËÙ·µ»Ø£¬·ñÔò»á¶ÂÈûºóĞøÏûÏ¢£¬µ±¶ÂÈûÑÏÖØÊ±£¬»á´¥·¢¶ÏÏß
-	virtual void OnQueryOtherServerFund(XTPFundQueryRsp *fund_info, XTPRI *error_info, int request_id, uint64_t session_id);
-
-	//-------------------------------------------------------------------------------------
-	//task£ºÈÎÎñ
-	//-------------------------------------------------------------------------------------
-
-	void processTask();
-
-	void processDisconnected(Task *task);
-
-	void processError(Task *task);
-
-	void processOrderEvent(Task *task);
-
-	void processTradeEvent(Task *task);
-
-	void processCancelOrderError(Task *task);
-
-	void processQueryOrder(Task *task);
-
-	void processQueryOrderByPage(Task *task);
-
-	void processQueryTrade(Task *task);
-
-	void processQueryTradeByPage(Task *task);
-
-	void processQueryPosition(Task *task);
-
-	void processQueryAsset(Task *task);
-
-	void processQueryStructuredFund(Task *task);
-
-	void processQueryFundTransfer(Task *task);
-
-	void processFundTransfer(Task *task);
-
-	void processQueryETF(Task *task);
-
-	void processQueryETFBasket(Task *task);
-
-	void processQueryIPOInfoList(Task *task);
-
-	void processQueryIPOQuotaInfo(Task *task);
-
-	void processQueryOptionAuctionInfo(Task *task);
-
-	void processCreditCashRepay(Task *task);
+    TraderApi() {
+        function0<void> f = boost::bind(&TraderApi::processTask, this);
+        boost::thread t(f);
+        this->task_thread = &t;
+    };
+
+    ~TraderApi() {
+    };
+
+    //-------------------------------------------------------------------------------------
+    //APIå›è°ƒå‡½æ•°
+    //-------------------------------------------------------------------------------------
+
+    ///å½“å®¢æˆ·ç«¯çš„æŸä¸ªè¿æ¥ä¸äº¤æ˜“åå°é€šä¿¡è¿æ¥æ–­å¼€æ—¶ï¼Œè¯¥æ–¹æ³•è¢«è°ƒç”¨ã€‚
+    ///@param reason é”™è¯¯åŸå› ï¼Œè¯·ä¸é”™è¯¯ä»£ç è¡¨å¯¹åº”
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark ç”¨æˆ·ä¸»åŠ¨è°ƒç”¨logoutå¯¼è‡´çš„æ–­çº¿ï¼Œä¸ä¼šè§¦å‘æ­¤å‡½æ•°ã€‚apiä¸ä¼šè‡ªåŠ¨é‡è¿ï¼Œå½“æ–­çº¿å‘ç”Ÿæ—¶ï¼Œè¯·ç”¨æˆ·è‡ªè¡Œé€‰æ‹©åç»­æ“ä½œï¼Œå¯ä»¥åœ¨æ­¤å‡½æ•°ä¸­è°ƒç”¨Loginé‡æ–°ç™»å½•ï¼Œå¹¶æ›´æ–°session_idï¼Œæ­¤æ—¶ç”¨æˆ·æ”¶åˆ°çš„æ•°æ®è·Ÿæ–­çº¿ä¹‹å‰æ˜¯è¿ç»­çš„
+    virtual void OnDisconnected(uint64_t session_id, int reason);
+
+    ///é”™è¯¯åº”ç­”
+    ///@param error_info å½“æœåŠ¡å™¨å“åº”å‘ç”Ÿé”™è¯¯æ—¶çš„å…·ä½“çš„é”™è¯¯ä»£ç å’Œé”™è¯¯ä¿¡æ¯,å½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@remark æ­¤å‡½æ•°åªæœ‰åœ¨æœåŠ¡å™¨å‘ç”Ÿé”™è¯¯æ—¶æ‰ä¼šè°ƒç”¨ï¼Œä¸€èˆ¬æ— éœ€ç”¨æˆ·å¤„ç†
+    virtual void OnError(XTPRI *error_info);
+
+    ///æŠ¥å•é€šçŸ¥
+    ///@param order_info è®¢å•å“åº”å…·ä½“ä¿¡æ¯ï¼Œç”¨æˆ·å¯ä»¥é€šè¿‡order_info.order_xtp_idæ¥ç®¡ç†è®¢å•ï¼Œé€šè¿‡GetClientIDByXTPID() == client_idæ¥è¿‡æ»¤è‡ªå·±çš„è®¢å•ï¼Œorder_info.qty_leftå­—æ®µåœ¨è®¢å•ä¸ºæœªæˆäº¤ã€éƒ¨æˆã€å…¨æˆã€åºŸå•çŠ¶æ€æ—¶ï¼Œè¡¨ç¤ºæ­¤è®¢å•è¿˜æ²¡æœ‰æˆäº¤çš„æ•°é‡ï¼Œåœ¨éƒ¨æ’¤ã€å…¨æ’¤çŠ¶æ€æ—¶ï¼Œè¡¨ç¤ºæ­¤è®¢å•è¢«æ’¤çš„æ•°é‡ã€‚order_info.order_cancel_xtp_idä¸ºå…¶æ‰€å¯¹åº”çš„æ’¤å•IDï¼Œä¸ä¸º0æ—¶è¡¨ç¤ºæ­¤å•è¢«æ’¤æˆåŠŸ
+    ///@param error_info è®¢å•è¢«æ‹’ç»æˆ–è€…å‘ç”Ÿé”™è¯¯æ—¶é”™è¯¯ä»£ç å’Œé”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@remark æ¯æ¬¡è®¢å•çŠ¶æ€æ›´æ–°æ—¶ï¼Œéƒ½ä¼šè¢«è°ƒç”¨ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿ï¼Œåœ¨è®¢å•æœªæˆäº¤ã€å…¨éƒ¨æˆäº¤ã€å…¨éƒ¨æ’¤å•ã€éƒ¨åˆ†æ’¤å•ã€å·²æ‹’ç»è¿™äº›çŠ¶æ€æ—¶ä¼šæœ‰å“åº”ï¼Œå¯¹äºéƒ¨åˆ†æˆäº¤çš„æƒ…å†µï¼Œè¯·ç”±è®¢å•çš„æˆäº¤å›æŠ¥æ¥è‡ªè¡Œç¡®è®¤ã€‚æ‰€æœ‰ç™»å½•äº†æ­¤ç”¨æˆ·çš„å®¢æˆ·ç«¯éƒ½å°†æ”¶åˆ°æ­¤ç”¨æˆ·çš„è®¢å•å“åº”
+    virtual void OnOrderEvent(XTPOrderInfo *order_info, XTPRI *error_info, uint64_t session_id);
+
+    ///æˆäº¤é€šçŸ¥
+    ///@param trade_info æˆäº¤å›æŠ¥çš„å…·ä½“ä¿¡æ¯ï¼Œç”¨æˆ·å¯ä»¥é€šè¿‡trade_info.order_xtp_idæ¥ç®¡ç†è®¢å•ï¼Œé€šè¿‡GetClientIDByXTPID() == client_idæ¥è¿‡æ»¤è‡ªå·±çš„è®¢å•ã€‚å¯¹äºä¸Šäº¤æ‰€ï¼Œexec_idå¯ä»¥å”¯ä¸€æ ‡è¯†ä¸€ç¬”æˆäº¤ã€‚å½“å‘ç°2ç¬”æˆäº¤å›æŠ¥æ‹¥æœ‰ç›¸åŒçš„exec_idï¼Œåˆ™å¯ä»¥è®¤ä¸ºæ­¤ç¬”äº¤æ˜“è‡ªæˆäº¤äº†ã€‚å¯¹äºæ·±äº¤æ‰€ï¼Œexec_idæ˜¯å”¯ä¸€çš„ï¼Œæš‚æ—¶æ— æ­¤åˆ¤æ–­æœºåˆ¶ã€‚report_index+marketå­—æ®µå¯ä»¥ç»„æˆå”¯ä¸€æ ‡è¯†è¡¨ç¤ºæˆäº¤å›æŠ¥ã€‚
+    ///@remark è®¢å•æœ‰æˆäº¤å‘ç”Ÿçš„æ—¶å€™ï¼Œä¼šè¢«è°ƒç”¨ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿ã€‚æ‰€æœ‰ç™»å½•äº†æ­¤ç”¨æˆ·çš„å®¢æˆ·ç«¯éƒ½å°†æ”¶åˆ°æ­¤ç”¨æˆ·çš„æˆäº¤å›æŠ¥ã€‚ç›¸å…³è®¢å•ä¸ºéƒ¨æˆçŠ¶æ€ï¼Œéœ€è¦ç”¨æˆ·é€šè¿‡æˆäº¤å›æŠ¥çš„æˆäº¤æ•°é‡æ¥ç¡®å®šï¼ŒOnOrderEvent()ä¸ä¼šæ¨é€éƒ¨æˆçŠ¶æ€ã€‚
+    virtual void OnTradeEvent(XTPTradeReport *trade_info, uint64_t session_id);
+
+    ///æ’¤å•å‡ºé”™å“åº”
+    ///@param cancel_info æ’¤å•å…·ä½“ä¿¡æ¯ï¼ŒåŒ…æ‹¬æ’¤å•çš„order_cancel_xtp_idå’Œå¾…æ’¤å•çš„order_xtp_id
+    ///@param error_info æ’¤å•è¢«æ‹’ç»æˆ–è€…å‘ç”Ÿé”™è¯¯æ—¶é”™è¯¯ä»£ç å’Œé”™è¯¯ä¿¡æ¯ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@remark æ­¤å“åº”åªä¼šåœ¨æ’¤å•å‘ç”Ÿé”™è¯¯æ—¶è¢«å›è°ƒ
+    virtual void OnCancelOrderError(XTPOrderCancelInfo *cancel_info, XTPRI *error_info, uint64_t session_id);
+
+    ///è¯·æ±‚æŸ¥è¯¢æŠ¥å•å“åº”
+    ///@param order_info æŸ¥è¯¢åˆ°çš„ä¸€ä¸ªæŠ¥å•
+    ///@param error_info æŸ¥è¯¢æŠ¥å•æ—¶å‘ç”Ÿé”™è¯¯æ—¶ï¼Œè¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@remark ç”±äºæ”¯æŒåˆ†æ—¶æ®µæŸ¥è¯¢ï¼Œä¸€ä¸ªæŸ¥è¯¢è¯·æ±‚å¯èƒ½å¯¹åº”å¤šä¸ªå“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void
+    OnQueryOrder(XTPQueryOrderRsp *order_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
+
+    ///åˆ†é¡µè¯·æ±‚æŸ¥è¯¢æŠ¥å•å“åº”
+    ///@param order_info æŸ¥è¯¢åˆ°çš„ä¸€ä¸ªæŠ¥å•
+    ///@param req_count åˆ†é¡µè¯·æ±‚çš„æœ€å¤§æ•°é‡
+    ///@param order_sequence åˆ†é¡µè¯·æ±‚çš„å½“å‰å›æŠ¥æ•°é‡
+    ///@param query_reference å½“å‰æŠ¥å•ä¿¡æ¯æ‰€å¯¹åº”çš„æŸ¥è¯¢ç´¢å¼•ï¼Œéœ€è¦è®°å½•ä¸‹æ¥ï¼Œåœ¨è¿›è¡Œä¸‹ä¸€æ¬¡åˆ†é¡µæŸ¥è¯¢çš„æ—¶å€™éœ€è¦ç”¨åˆ°
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark å½“order_sequenceä¸º0ï¼Œè¡¨æ˜å½“æ¬¡æŸ¥è¯¢æ²¡æœ‰æŸ¥åˆ°ä»»ä½•è®°å½•ï¼Œå½“is_lastä¸ºtrueæ—¶ï¼Œå¦‚æœorder_sequenceç­‰äºreq_countï¼Œé‚£ä¹ˆè¡¨ç¤ºè¿˜æœ‰æŠ¥å•ï¼Œå¯ä»¥è¿›è¡Œä¸‹ä¸€æ¬¡åˆ†é¡µæŸ¥è¯¢ï¼Œå¦‚æœä¸ç­‰ï¼Œè¡¨ç¤ºæ‰€æœ‰æŠ¥å•å·²ç»æŸ¥è¯¢å®Œæ¯•ã€‚ä¸€ä¸ªæŸ¥è¯¢è¯·æ±‚å¯èƒ½å¯¹åº”å¤šä¸ªå“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿ã€‚
+    virtual void
+    OnQueryOrderByPage(XTPQueryOrderRsp *order_info, int64_t req_count, int64_t order_sequence, int64_t query_reference,
+                       int request_id, bool is_last, uint64_t session_id);
+
+
+    ///è¯·æ±‚æŸ¥è¯¢æˆäº¤å“åº”
+    ///@param trade_info æŸ¥è¯¢åˆ°çš„ä¸€ä¸ªæˆäº¤å›æŠ¥
+    ///@param error_info æŸ¥è¯¢æˆäº¤å›æŠ¥å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@remark ç”±äºæ”¯æŒåˆ†æ—¶æ®µæŸ¥è¯¢ï¼Œä¸€ä¸ªæŸ¥è¯¢è¯·æ±‚å¯èƒ½å¯¹åº”å¤šä¸ªå“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void
+    OnQueryTrade(XTPQueryTradeRsp *trade_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
+
+    ///åˆ†é¡µè¯·æ±‚æŸ¥è¯¢æˆäº¤å“åº”
+    ///@param trade_info æŸ¥è¯¢åˆ°çš„ä¸€ä¸ªæˆäº¤ä¿¡æ¯
+    ///@param req_count åˆ†é¡µè¯·æ±‚çš„æœ€å¤§æ•°é‡
+    ///@param trade_sequence åˆ†é¡µè¯·æ±‚çš„å½“å‰å›æŠ¥æ•°é‡
+    ///@param query_reference å½“å‰æŠ¥å•ä¿¡æ¯æ‰€å¯¹åº”çš„æŸ¥è¯¢ç´¢å¼•ï¼Œéœ€è¦è®°å½•ä¸‹æ¥ï¼Œåœ¨è¿›è¡Œä¸‹ä¸€æ¬¡åˆ†é¡µæŸ¥è¯¢çš„æ—¶å€™éœ€è¦ç”¨åˆ°
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark å½“trade_sequenceä¸º0ï¼Œè¡¨æ˜å½“æ¬¡æŸ¥è¯¢æ²¡æœ‰æŸ¥åˆ°ä»»ä½•è®°å½•ï¼Œå½“is_lastä¸ºtrueæ—¶ï¼Œå¦‚æœtrade_sequenceç­‰äºreq_countï¼Œé‚£ä¹ˆè¡¨ç¤ºè¿˜æœ‰å›æŠ¥ï¼Œå¯ä»¥è¿›è¡Œä¸‹ä¸€æ¬¡åˆ†é¡µæŸ¥è¯¢ï¼Œå¦‚æœä¸ç­‰ï¼Œè¡¨ç¤ºæ‰€æœ‰å›æŠ¥å·²ç»æŸ¥è¯¢å®Œæ¯•ã€‚ä¸€ä¸ªæŸ¥è¯¢è¯·æ±‚å¯èƒ½å¯¹åº”å¤šä¸ªå“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿ã€‚
+    virtual void
+    OnQueryTradeByPage(XTPQueryTradeRsp *trade_info, int64_t req_count, int64_t trade_sequence, int64_t query_reference,
+                       int request_id, bool is_last, uint64_t session_id);
+
+    ///è¯·æ±‚æŸ¥è¯¢æŠ•èµ„è€…æŒä»“å“åº”
+    ///@param position æŸ¥è¯¢åˆ°çš„ä¸€åªè‚¡ç¥¨çš„æŒä»“æƒ…å†µ
+    ///@param error_info æŸ¥è¯¢è´¦æˆ·æŒä»“å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@remark ç”±äºç”¨æˆ·å¯èƒ½æŒæœ‰å¤šä¸ªè‚¡ç¥¨ï¼Œä¸€ä¸ªæŸ¥è¯¢è¯·æ±‚å¯èƒ½å¯¹åº”å¤šä¸ªå“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void OnQueryPosition(XTPQueryStkPositionRsp *position, XTPRI *error_info, int request_id, bool is_last,
+                                 uint64_t session_id);
+
+    ///è¯·æ±‚æŸ¥è¯¢èµ„é‡‘è´¦æˆ·å“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    ///@param asset æŸ¥è¯¢åˆ°çš„èµ„é‡‘è´¦æˆ·æƒ…å†µ
+    ///@param error_info æŸ¥è¯¢èµ„é‡‘è´¦æˆ·å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void
+    OnQueryAsset(XTPQueryAssetRsp *asset, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
+
+
+    ///è¯·æ±‚æŸ¥è¯¢åˆ†çº§åŸºé‡‘ä¿¡æ¯å“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    ///@param fund_info æŸ¥è¯¢åˆ°çš„åˆ†çº§åŸºé‡‘æƒ…å†µ
+    ///@param error_info æŸ¥è¯¢åˆ†çº§åŸºé‡‘å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void
+    OnQueryStructuredFund(XTPStructuredFundInfo *fund_info, XTPRI *error_info, int request_id, bool is_last,
+                          uint64_t session_id);
+
+    ///è¯·æ±‚æŸ¥è¯¢èµ„é‡‘åˆ’æ‹¨è®¢å•å“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    ///@param fund_transfer_info æŸ¥è¯¢åˆ°çš„èµ„é‡‘è´¦æˆ·æƒ…å†µ
+    ///@param error_info æŸ¥è¯¢èµ„é‡‘è´¦æˆ·å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void
+    OnQueryFundTransfer(XTPFundTransferNotice *fund_transfer_info, XTPRI *error_info, int request_id, bool is_last,
+                        uint64_t session_id);
+
+    ///èµ„é‡‘åˆ’æ‹¨é€šçŸ¥
+    ///@param fund_transfer_info èµ„é‡‘åˆ’æ‹¨é€šçŸ¥çš„å…·ä½“ä¿¡æ¯ï¼Œç”¨æˆ·å¯ä»¥é€šè¿‡fund_transfer_info.serial_idæ¥ç®¡ç†è®¢å•ï¼Œé€šè¿‡GetClientIDByXTPID() == client_idæ¥è¿‡æ»¤è‡ªå·±çš„è®¢å•ã€‚
+    ///@param error_info èµ„é‡‘åˆ’æ‹¨è®¢å•è¢«æ‹’ç»æˆ–è€…å‘ç”Ÿé”™è¯¯æ—¶é”™è¯¯ä»£ç å’Œé”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@remark å½“èµ„é‡‘åˆ’æ‹¨è®¢å•æœ‰çŠ¶æ€å˜åŒ–çš„æ—¶å€™ï¼Œä¼šè¢«è°ƒç”¨ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿ã€‚æ‰€æœ‰ç™»å½•äº†æ­¤ç”¨æˆ·çš„å®¢æˆ·ç«¯éƒ½å°†æ”¶åˆ°æ­¤ç”¨æˆ·çš„èµ„é‡‘åˆ’æ‹¨é€šçŸ¥ã€‚
+    virtual void OnFundTransfer(XTPFundTransferNotice *fund_transfer_info, XTPRI *error_info, uint64_t session_id);
+
+    ///è¯·æ±‚æŸ¥è¯¢ETFæ¸…å•æ–‡ä»¶çš„å“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    ///@param etf_info æŸ¥è¯¢åˆ°çš„ETFæ¸…å•æ–‡ä»¶æƒ…å†µ
+    ///@param error_info æŸ¥è¯¢ETFæ¸…å•æ–‡ä»¶å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void
+    OnQueryETF(XTPQueryETFBaseRsp *etf_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
+
+    ///è¯·æ±‚æŸ¥è¯¢ETFè‚¡ç¥¨ç¯®çš„å“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    ///@param etf_component_info æŸ¥è¯¢åˆ°çš„ETFåˆçº¦çš„ç›¸å…³æˆåˆ†è‚¡ä¿¡æ¯
+    ///@param error_info æŸ¥è¯¢ETFè‚¡ç¥¨ç¯®å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void
+    OnQueryETFBasket(XTPQueryETFComponentRsp *etf_component_info, XTPRI *error_info, int request_id, bool is_last,
+                     uint64_t session_id);
+
+    ///è¯·æ±‚æŸ¥è¯¢ä»Šæ—¥æ–°è‚¡ç”³è´­ä¿¡æ¯åˆ—è¡¨çš„å“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    ///@param ipo_info æŸ¥è¯¢åˆ°çš„ä»Šæ—¥æ–°è‚¡ç”³è´­çš„ä¸€åªè‚¡ç¥¨ä¿¡æ¯
+    ///@param error_info æŸ¥è¯¢ä»Šæ—¥æ–°è‚¡ç”³è´­ä¿¡æ¯åˆ—è¡¨å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void OnQueryIPOInfoList(XTPQueryIPOTickerRsp *ipo_info, XTPRI *error_info, int request_id, bool is_last,
+                                    uint64_t session_id);
+
+    ///è¯·æ±‚æŸ¥è¯¢ç”¨æˆ·æ–°è‚¡ç”³è´­é¢åº¦ä¿¡æ¯çš„å“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    ///@param quota_info æŸ¥è¯¢åˆ°çš„ç”¨æˆ·æŸä¸ªå¸‚åœºçš„ä»Šæ—¥æ–°è‚¡ç”³è´­é¢åº¦ä¿¡æ¯
+    ///@param error_info æŸ¥æŸ¥è¯¢ç”¨æˆ·æ–°è‚¡ç”³è´­é¢åº¦ä¿¡æ¯å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void OnQueryIPOQuotaInfo(XTPQueryIPOQuotaRsp *quota_info, XTPRI *error_info, int request_id, bool is_last,
+                                     uint64_t session_id);
+
+
+    ///è¯·æ±‚æŸ¥è¯¢æœŸæƒåˆçº¦çš„å“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    ///@param option_info æŸ¥è¯¢åˆ°çš„æœŸæƒåˆçº¦æƒ…å†µ
+    ///@param error_info æŸ¥è¯¢æœŸæƒåˆçº¦å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void
+    OnQueryOptionAuctionInfo(XTPQueryOptionAuctionInfoRsp *option_info, XTPRI *error_info, int request_id, bool is_last,
+                             uint64_t session_id);
+
+    ///èèµ„èåˆ¸ä¸šåŠ¡ä¸­ç°é‡‘ç›´æ¥è¿˜æ¬¾çš„å“åº”
+    ///@param cash_repay_info ç°é‡‘ç›´æ¥è¿˜æ¬¾é€šçŸ¥çš„å…·ä½“ä¿¡æ¯ï¼Œç”¨æˆ·å¯ä»¥é€šè¿‡cash_repay_info.xtp_idæ¥ç®¡ç†è®¢å•ï¼Œé€šè¿‡GetClientIDByXTPID() == client_idæ¥è¿‡æ»¤è‡ªå·±çš„è®¢å•ã€‚
+    ///@param error_info ç°é‡‘è¿˜æ¬¾å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void OnCreditCashRepay(XTPCrdCashRepayRsp *cash_repay_info, XTPRI *error_info, uint64_t session_id);
+
+    ///èèµ„èåˆ¸ä¸šåŠ¡ä¸­ç°é‡‘è¿˜æ¯çš„å“åº”
+    ///@param cash_repay_info ç°é‡‘è¿˜æ¯é€šçŸ¥çš„å…·ä½“ä¿¡æ¯ï¼Œç”¨æˆ·å¯ä»¥é€šè¿‡cash_repay_info.xtp_idæ¥ç®¡ç†è®¢å•ï¼Œé€šè¿‡GetClientIDByXTPID() == client_idæ¥è¿‡æ»¤è‡ªå·±çš„è®¢å•ã€‚
+    ///@param error_info ç°é‡‘è¿˜æ¯å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void OnCreditCashRepayDebtInterestFee(XTPCrdCashRepayDebtInterestFeeRsp *cash_repay_info, XTPRI *error_info,
+                                                  uint64_t session_id);
+
+    ///è¯·æ±‚æŸ¥è¯¢èèµ„èåˆ¸ä¸šåŠ¡ä¸­çš„ç°é‡‘ç›´æ¥è¿˜æ¬¾æŠ¥å•çš„å“åº”
+    ///@param cash_repay_info æŸ¥è¯¢åˆ°çš„æŸä¸€ç¬”ç°é‡‘ç›´æ¥è¿˜æ¬¾é€šçŸ¥çš„å…·ä½“ä¿¡æ¯
+    ///@param error_info æŸ¥è¯¢ç°é‡‘ç›´æ¥æŠ¥å•å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void
+    OnQueryCreditCashRepayInfo(XTPCrdCashRepayInfo *cash_repay_info, XTPRI *error_info, int request_id, bool is_last,
+                               uint64_t session_id);
+
+    ///è¯·æ±‚æŸ¥è¯¢ä¿¡ç”¨è´¦æˆ·é¢å¤–ä¿¡æ¯çš„å“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    ///@param fund_info æŸ¥è¯¢åˆ°çš„ä¿¡ç”¨è´¦æˆ·é¢å¤–ä¿¡æ¯æƒ…å†µ
+    ///@param error_info æŸ¥è¯¢ä¿¡ç”¨è´¦æˆ·é¢å¤–ä¿¡æ¯å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void
+    OnQueryCreditFundInfo(XTPCrdFundInfo *fund_info, XTPRI *error_info, int request_id, uint64_t session_id);
+
+    ///è¯·æ±‚æŸ¥è¯¢ä¿¡ç”¨è´¦æˆ·è´Ÿå€ºä¿¡æ¯çš„å“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    ///@param debt_info æŸ¥è¯¢åˆ°çš„ä¿¡ç”¨è´¦æˆ·åˆçº¦è´Ÿå€ºæƒ…å†µ
+    ///@param error_info æŸ¥è¯¢ä¿¡ç”¨è´¦æˆ·è´Ÿå€ºä¿¡æ¯å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void OnQueryCreditDebtInfo(XTPCrdDebtInfo *debt_info, XTPRI *error_info, int request_id, bool is_last,
+                                       uint64_t session_id);
+
+    ///è¯·æ±‚æŸ¥è¯¢ä¿¡ç”¨è´¦æˆ·æŒ‡å®šè¯åˆ¸è´Ÿå€ºæœªè¿˜ä¿¡æ¯å“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    ///@param debt_info æŸ¥è¯¢åˆ°çš„ä¿¡ç”¨è´¦æˆ·æŒ‡å®šè¯åˆ¸è´Ÿå€ºæœªè¿˜ä¿¡æ¯æƒ…å†µ
+    ///@param error_info æŸ¥è¯¢ä¿¡ç”¨è´¦æˆ·æŒ‡å®šè¯åˆ¸è´Ÿå€ºæœªè¿˜ä¿¡æ¯å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void
+    OnQueryCreditTickerDebtInfo(XTPCrdDebtStockInfo *debt_info, XTPRI *error_info, int request_id, bool is_last,
+                                uint64_t session_id);
+
+    ///è¯·æ±‚æŸ¥è¯¢ä¿¡ç”¨è´¦æˆ·å¾…è¿˜èµ„é‡‘çš„å“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    ///@param remain_amount æŸ¥è¯¢åˆ°çš„ä¿¡ç”¨è´¦æˆ·å¾…è¿˜èµ„é‡‘
+    ///@param error_info æŸ¥è¯¢ä¿¡ç”¨è´¦æˆ·å¾…è¿˜èµ„é‡‘å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void
+    OnQueryCreditAssetDebtInfo(double remain_amount, XTPRI *error_info, int request_id, uint64_t session_id);
+
+    ///è¯·æ±‚æŸ¥è¯¢ä¿¡ç”¨è´¦æˆ·å¯èåˆ¸å¤´å¯¸ä¿¡æ¯çš„å“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    ///@param assign_info æŸ¥è¯¢åˆ°çš„ä¿¡ç”¨è´¦æˆ·å¯èåˆ¸å¤´å¯¸ä¿¡æ¯
+    ///@param error_info æŸ¥è¯¢ä¿¡ç”¨è´¦æˆ·å¯èåˆ¸å¤´å¯¸ä¿¡æ¯å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void
+    OnQueryCreditTickerAssignInfo(XTPClientQueryCrdPositionStkInfo *assign_info, XTPRI *error_info, int request_id,
+                                  bool is_last, uint64_t session_id);
+
+    ///èèµ„èåˆ¸ä¸šåŠ¡ä¸­è¯·æ±‚æŸ¥è¯¢æŒ‡å®šä½™åˆ¸ä¿¡æ¯çš„å“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    ///@param stock_info æŸ¥è¯¢åˆ°çš„ä½™åˆ¸ä¿¡æ¯
+    ///@param error_info æŸ¥è¯¢ä¿¡ç”¨è´¦æˆ·ä½™åˆ¸ä¿¡æ¯å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void
+    OnQueryCreditExcessStock(XTPClientQueryCrdSurplusStkRspInfo *stock_info, XTPRI *error_info, int request_id,
+                             uint64_t session_id);
+
+    ///èèµ„èåˆ¸ä¸šåŠ¡ä¸­è¯·æ±‚æŸ¥è¯¢ä½™åˆ¸ä¿¡æ¯çš„å“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    ///@param stock_info æŸ¥è¯¢åˆ°çš„ä½™åˆ¸ä¿¡æ¯
+    ///@param error_info æŸ¥è¯¢ä¿¡ç”¨è´¦æˆ·ä½™åˆ¸ä¿¡æ¯å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void
+    OnQueryMulCreditExcessStock(XTPClientQueryCrdSurplusStkRspInfo *stock_info, XTPRI *error_info, int request_id,
+                                uint64_t session_id, bool is_last);
+
+    ///èèµ„èåˆ¸ä¸šåŠ¡ä¸­è´Ÿå€ºåˆçº¦å±•æœŸçš„é€šçŸ¥
+    ///@param debt_extend_info è´Ÿå€ºåˆçº¦å±•æœŸé€šçŸ¥çš„å…·ä½“ä¿¡æ¯ï¼Œç”¨æˆ·å¯ä»¥é€šè¿‡debt_extend_info.xtpidæ¥ç®¡ç†è®¢å•ï¼Œé€šè¿‡GetClientIDByXTPID() == client_idæ¥è¿‡æ»¤è‡ªå·±çš„è®¢å•ã€‚
+    ///@param error_info è´Ÿå€ºåˆçº¦å±•æœŸè®¢å•è¢«æ‹’ç»æˆ–è€…å‘ç”Ÿé”™è¯¯æ—¶é”™è¯¯ä»£ç å’Œé”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯ã€‚
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark å½“è´Ÿå€ºåˆçº¦å±•æœŸè®¢å•æœ‰çŠ¶æ€å˜åŒ–çš„æ—¶å€™ï¼Œä¼šè¢«è°ƒç”¨ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿ã€‚æ‰€æœ‰ç™»å½•äº†æ­¤ç”¨æˆ·çš„å®¢æˆ·ç«¯éƒ½å°†æ”¶åˆ°æ­¤ç”¨æˆ·çš„è´Ÿå€ºåˆçº¦å±•æœŸé€šçŸ¥ã€‚
+    virtual void
+    OnCreditExtendDebtDate(XTPCreditDebtExtendNotice *debt_extend_info, XTPRI *error_info, uint64_t session_id);
+
+    ///æŸ¥è¯¢èèµ„èåˆ¸ä¸šåŠ¡ä¸­è´Ÿå€ºåˆçº¦å±•æœŸè®¢å•å“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    ///@param debt_extend_info æŸ¥è¯¢åˆ°çš„è´Ÿå€ºåˆçº¦å±•æœŸæƒ…å†µ
+    ///@param error_info æŸ¥è¯¢è´Ÿå€ºåˆçº¦å±•æœŸå‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯ã€‚å½“error_info.error_id=11000350æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰è®°å½•ï¼Œå½“ä¸ºå…¶ä»–é0å€¼æ—¶ï¼Œè¡¨æ˜åˆçº¦å‘ç”Ÿæ‹’å•æ—¶çš„é”™è¯¯åŸå› 
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void
+    OnQueryCreditExtendDebtDateOrders(XTPCreditDebtExtendNotice *debt_extend_info, XTPRI *error_info, int request_id,
+                                      bool is_last, uint64_t session_id);
+
+    ///æŸ¥è¯¢èèµ„èåˆ¸ä¸šåŠ¡ä¸­ä¿¡ç”¨è´¦æˆ·é™„åŠ ä¿¡æ¯çš„å“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    ///@param fund_info ä¿¡ç”¨è´¦æˆ·é™„åŠ ä¿¡æ¯
+    ///@param error_info æŸ¥è¯¢ä¿¡ç”¨è´¦æˆ·é™„åŠ ä¿¡æ¯å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void
+    OnQueryCreditFundExtraInfo(XTPCrdFundExtraInfo *fund_info, XTPRI *error_info, int request_id, uint64_t session_id);
+
+    ///æŸ¥è¯¢èèµ„èåˆ¸ä¸šåŠ¡ä¸­ä¿¡ç”¨è´¦æˆ·æŒ‡å®šè¯åˆ¸çš„é™„åŠ ä¿¡æ¯çš„å“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    ///@param fund_info ä¿¡ç”¨è´¦æˆ·æŒ‡å®šè¯åˆ¸çš„é™„åŠ ä¿¡æ¯
+    ///@param error_info æŸ¥è¯¢ä¿¡ç”¨è´¦æˆ·é™„åŠ ä¿¡æ¯å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void
+    OnQueryCreditPositionExtraInfo(XTPCrdPositionExtraInfo *fund_info, XTPRI *error_info, int request_id, bool is_last,
+                                   uint64_t session_id);
+
+    ///æœŸæƒç»„åˆç­–ç•¥æŠ¥å•é€šçŸ¥
+    ///@param order_info è®¢å•å“åº”å…·ä½“ä¿¡æ¯ï¼Œç”¨æˆ·å¯ä»¥é€šè¿‡order_info.order_xtp_idæ¥ç®¡ç†è®¢å•ï¼Œé€šè¿‡GetClientIDByXTPID() == client_idæ¥è¿‡æ»¤è‡ªå·±çš„è®¢å•ï¼Œorder_info.qty_leftå­—æ®µåœ¨è®¢å•ä¸ºæœªæˆäº¤ã€éƒ¨æˆã€å…¨æˆã€åºŸå•çŠ¶æ€æ—¶ï¼Œè¡¨ç¤ºæ­¤è®¢å•è¿˜æ²¡æœ‰æˆäº¤çš„æ•°é‡ï¼Œåœ¨éƒ¨æ’¤ã€å…¨æ’¤çŠ¶æ€æ—¶ï¼Œè¡¨ç¤ºæ­¤è®¢å•è¢«æ’¤çš„æ•°é‡ã€‚order_info.order_cancel_xtp_idä¸ºå…¶æ‰€å¯¹åº”çš„æ’¤å•IDï¼Œä¸ä¸º0æ—¶è¡¨ç¤ºæ­¤å•è¢«æ’¤æˆåŠŸ
+    ///@param error_info è®¢å•è¢«æ‹’ç»æˆ–è€…å‘ç”Ÿé”™è¯¯æ—¶é”™è¯¯ä»£ç å’Œé”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark æ¯æ¬¡è®¢å•çŠ¶æ€æ›´æ–°æ—¶ï¼Œéƒ½ä¼šè¢«è°ƒç”¨ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿ï¼Œåœ¨è®¢å•æœªæˆäº¤ã€å…¨éƒ¨æˆäº¤ã€å…¨éƒ¨æ’¤å•ã€éƒ¨åˆ†æ’¤å•ã€å·²æ‹’ç»è¿™äº›çŠ¶æ€æ—¶ä¼šæœ‰å“åº”ï¼Œå¯¹äºéƒ¨åˆ†æˆäº¤çš„æƒ…å†µï¼Œè¯·ç”±è®¢å•çš„æˆäº¤å›æŠ¥æ¥è‡ªè¡Œç¡®è®¤ã€‚æ‰€æœ‰ç™»å½•äº†æ­¤ç”¨æˆ·çš„å®¢æˆ·ç«¯éƒ½å°†æ”¶åˆ°æ­¤ç”¨æˆ·çš„è®¢å•å“åº”
+    virtual void OnOptionCombinedOrderEvent(XTPOptCombOrderInfo *order_info, XTPRI *error_info, uint64_t session_id);
+
+    ///æœŸæƒç»„åˆç­–ç•¥æˆäº¤é€šçŸ¥
+    ///@param trade_info æˆäº¤å›æŠ¥çš„å…·ä½“ä¿¡æ¯ï¼Œç”¨æˆ·å¯ä»¥é€šè¿‡trade_info.order_xtp_idæ¥ç®¡ç†è®¢å•ï¼Œé€šè¿‡GetClientIDByXTPID() == client_idæ¥è¿‡æ»¤è‡ªå·±çš„è®¢å•ã€‚å¯¹äºä¸Šäº¤æ‰€ï¼Œexec_idå¯ä»¥å”¯ä¸€æ ‡è¯†ä¸€ç¬”æˆäº¤ã€‚å½“å‘ç°2ç¬”æˆäº¤å›æŠ¥æ‹¥æœ‰ç›¸åŒçš„exec_idï¼Œåˆ™å¯ä»¥è®¤ä¸ºæ­¤ç¬”äº¤æ˜“è‡ªæˆäº¤äº†ã€‚å¯¹äºæ·±äº¤æ‰€ï¼Œexec_idæ˜¯å”¯ä¸€çš„ï¼Œæš‚æ—¶æ— æ­¤åˆ¤æ–­æœºåˆ¶ã€‚report_index+marketå­—æ®µå¯ä»¥ç»„æˆå”¯ä¸€æ ‡è¯†è¡¨ç¤ºæˆäº¤å›æŠ¥ã€‚
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark è®¢å•æœ‰æˆäº¤å‘ç”Ÿçš„æ—¶å€™ï¼Œä¼šè¢«è°ƒç”¨ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿ã€‚æ‰€æœ‰ç™»å½•äº†æ­¤ç”¨æˆ·çš„å®¢æˆ·ç«¯éƒ½å°†æ”¶åˆ°æ­¤ç”¨æˆ·çš„æˆäº¤å›æŠ¥ã€‚ç›¸å…³è®¢å•ä¸ºéƒ¨æˆçŠ¶æ€ï¼Œéœ€è¦ç”¨æˆ·é€šè¿‡æˆäº¤å›æŠ¥çš„æˆäº¤æ•°é‡æ¥ç¡®å®šï¼ŒOnOrderEvent()ä¸ä¼šæ¨é€éƒ¨æˆçŠ¶æ€ã€‚
+    virtual void OnOptionCombinedTradeEvent(XTPOptCombTradeReport *trade_info, uint64_t session_id);
+
+    ///æœŸæƒç»„åˆç­–ç•¥æ’¤å•å‡ºé”™å“åº”
+    ///@param cancel_info æ’¤å•å…·ä½“ä¿¡æ¯ï¼ŒåŒ…æ‹¬æ’¤å•çš„order_cancel_xtp_idå’Œå¾…æ’¤å•çš„order_xtp_id
+    ///@param error_info æ’¤å•è¢«æ‹’ç»æˆ–è€…å‘ç”Ÿé”™è¯¯æ—¶é”™è¯¯ä»£ç å’Œé”™è¯¯ä¿¡æ¯ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark æ­¤å“åº”åªä¼šåœ¨æ’¤å•å‘ç”Ÿé”™è¯¯æ—¶è¢«å›è°ƒ
+    virtual void
+    OnCancelOptionCombinedOrderError(XTPOptCombOrderCancelInfo *cancel_info, XTPRI *error_info, uint64_t session_id);
+
+    ///è¯·æ±‚æŸ¥è¯¢æœŸæƒç»„åˆç­–ç•¥æŠ¥å•å“åº”
+    ///@param order_info æŸ¥è¯¢åˆ°çš„ä¸€ä¸ªæŠ¥å•
+    ///@param error_info æŸ¥è¯¢æŠ¥å•æ—¶å‘ç”Ÿé”™è¯¯æ—¶ï¼Œè¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark ç”±äºæ”¯æŒåˆ†æ—¶æ®µæŸ¥è¯¢ï¼Œä¸€ä¸ªæŸ¥è¯¢è¯·æ±‚å¯èƒ½å¯¹åº”å¤šä¸ªå“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿ã€‚æ­¤å¯¹åº”çš„è¯·æ±‚å‡½æ•°ä¸å»ºè®®è½®è¯¢ä½¿ç”¨ï¼Œå½“æŠ¥å•é‡è¿‡å¤šæ—¶ï¼Œå®¹æ˜“é€ æˆç”¨æˆ·çº¿è·¯æ‹¥å µï¼Œå¯¼è‡´apiæ–­çº¿
+    virtual void
+    OnQueryOptionCombinedOrders(XTPQueryOptCombOrderRsp *order_info, XTPRI *error_info, int request_id, bool is_last,
+                                uint64_t session_id);
+
+    ///åˆ†é¡µè¯·æ±‚æŸ¥è¯¢æœŸæƒç»„åˆç­–ç•¥æŠ¥å•å“åº”
+    ///@param order_info æŸ¥è¯¢åˆ°çš„ä¸€ä¸ªæŠ¥å•
+    ///@param req_count åˆ†é¡µè¯·æ±‚çš„æœ€å¤§æ•°é‡
+    ///@param order_sequence åˆ†é¡µè¯·æ±‚çš„å½“å‰å›æŠ¥æ•°é‡
+    ///@param query_reference å½“å‰æŠ¥å•ä¿¡æ¯æ‰€å¯¹åº”çš„æŸ¥è¯¢ç´¢å¼•ï¼Œéœ€è¦è®°å½•ä¸‹æ¥ï¼Œåœ¨è¿›è¡Œä¸‹ä¸€æ¬¡åˆ†é¡µæŸ¥è¯¢çš„æ—¶å€™éœ€è¦ç”¨åˆ°
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark å½“order_sequenceä¸º0ï¼Œè¡¨æ˜å½“æ¬¡æŸ¥è¯¢æ²¡æœ‰æŸ¥åˆ°ä»»ä½•è®°å½•ï¼Œå½“is_lastä¸ºtrueæ—¶ï¼Œå¦‚æœorder_sequenceç­‰äºreq_countï¼Œé‚£ä¹ˆè¡¨ç¤ºè¿˜æœ‰æŠ¥å•ï¼Œå¯ä»¥è¿›è¡Œä¸‹ä¸€æ¬¡åˆ†é¡µæŸ¥è¯¢ï¼Œå¦‚æœä¸ç­‰ï¼Œè¡¨ç¤ºæ‰€æœ‰æŠ¥å•å·²ç»æŸ¥è¯¢å®Œæ¯•ã€‚ä¸€ä¸ªæŸ¥è¯¢è¯·æ±‚å¯èƒ½å¯¹åº”å¤šä¸ªå“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿ã€‚
+    virtual void
+    OnQueryOptionCombinedOrdersByPage(XTPQueryOptCombOrderRsp *order_info, int64_t req_count, int64_t order_sequence,
+                                      int64_t query_reference, int request_id, bool is_last, uint64_t session_id);
+
+    ///è¯·æ±‚æŸ¥è¯¢æœŸæƒç»„åˆç­–ç•¥æˆäº¤å“åº”
+    ///@param trade_info æŸ¥è¯¢åˆ°çš„ä¸€ä¸ªæˆäº¤å›æŠ¥
+    ///@param error_info æŸ¥è¯¢æˆäº¤å›æŠ¥å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark ç”±äºæ”¯æŒåˆ†æ—¶æ®µæŸ¥è¯¢ï¼Œä¸€ä¸ªæŸ¥è¯¢è¯·æ±‚å¯èƒ½å¯¹åº”å¤šä¸ªå“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿ã€‚æ­¤å¯¹åº”çš„è¯·æ±‚å‡½æ•°ä¸å»ºè®®è½®è¯¢ä½¿ç”¨ï¼Œå½“æŠ¥å•é‡è¿‡å¤šæ—¶ï¼Œå®¹æ˜“é€ æˆç”¨æˆ·çº¿è·¯æ‹¥å µï¼Œå¯¼è‡´apiæ–­çº¿
+    virtual void
+    OnQueryOptionCombinedTrades(XTPQueryOptCombTradeRsp *trade_info, XTPRI *error_info, int request_id, bool is_last,
+                                uint64_t session_id);
+
+    ///åˆ†é¡µè¯·æ±‚æŸ¥è¯¢æœŸæƒç»„åˆç­–ç•¥æˆäº¤å“åº”
+    ///@param trade_info æŸ¥è¯¢åˆ°çš„ä¸€ä¸ªæˆäº¤ä¿¡æ¯
+    ///@param req_count åˆ†é¡µè¯·æ±‚çš„æœ€å¤§æ•°é‡
+    ///@param trade_sequence åˆ†é¡µè¯·æ±‚çš„å½“å‰å›æŠ¥æ•°é‡
+    ///@param query_reference å½“å‰æŠ¥å•ä¿¡æ¯æ‰€å¯¹åº”çš„æŸ¥è¯¢ç´¢å¼•ï¼Œéœ€è¦è®°å½•ä¸‹æ¥ï¼Œåœ¨è¿›è¡Œä¸‹ä¸€æ¬¡åˆ†é¡µæŸ¥è¯¢çš„æ—¶å€™éœ€è¦ç”¨åˆ°
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark å½“trade_sequenceä¸º0ï¼Œè¡¨æ˜å½“æ¬¡æŸ¥è¯¢æ²¡æœ‰æŸ¥åˆ°ä»»ä½•è®°å½•ï¼Œå½“is_lastä¸ºtrueæ—¶ï¼Œå¦‚æœtrade_sequenceç­‰äºreq_countï¼Œé‚£ä¹ˆè¡¨ç¤ºè¿˜æœ‰å›æŠ¥ï¼Œå¯ä»¥è¿›è¡Œä¸‹ä¸€æ¬¡åˆ†é¡µæŸ¥è¯¢ï¼Œå¦‚æœä¸ç­‰ï¼Œè¡¨ç¤ºæ‰€æœ‰å›æŠ¥å·²ç»æŸ¥è¯¢å®Œæ¯•ã€‚ä¸€ä¸ªæŸ¥è¯¢è¯·æ±‚å¯èƒ½å¯¹åº”å¤šä¸ªå“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿ã€‚
+    virtual void
+    OnQueryOptionCombinedTradesByPage(XTPQueryOptCombTradeRsp *trade_info, int64_t req_count, int64_t trade_sequence,
+                                      int64_t query_reference, int request_id, bool is_last, uint64_t session_id);
+
+    ///è¯·æ±‚æŸ¥è¯¢æœŸæƒç»„åˆç­–ç•¥æŒä»“å“åº”
+    ///@param position_info æŸ¥è¯¢åˆ°çš„ä¸€ä¸ªæŒä»“ä¿¡æ¯
+    ///@param error_info æŸ¥è¯¢æŒä»“å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark ä¸€ä¸ªæŸ¥è¯¢è¯·æ±‚å¯èƒ½å¯¹åº”å¤šä¸ªå“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿ã€‚
+    virtual void
+    OnQueryOptionCombinedPosition(XTPQueryOptCombPositionRsp *position_info, XTPRI *error_info, int request_id,
+                                  bool is_last, uint64_t session_id);
+
+    ///è¯·æ±‚æŸ¥è¯¢æœŸæƒç»„åˆç­–ç•¥ä¿¡æ¯å“åº”
+    ///@param strategy_info æŸ¥è¯¢åˆ°çš„ä¸€ä¸ªç»„åˆç­–ç•¥ä¿¡æ¯
+    ///@param error_info æŸ¥è¯¢æˆäº¤å›æŠ¥å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark ä¸€ä¸ªæŸ¥è¯¢è¯·æ±‚å¯èƒ½å¯¹åº”å¤šä¸ªå“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿ã€‚
+    virtual void
+    OnQueryOptionCombinedStrategyInfo(XTPQueryCombineStrategyInfoRsp *strategy_info, XTPRI *error_info, int request_id,
+                                      bool is_last, uint64_t session_id);
+
+    ///æŸ¥è¯¢æœŸæƒè¡Œæƒåˆå¹¶å¤´å¯¸çš„å“åº”
+    ///@param position_info æŸ¥è¯¢åˆ°çš„ä¸€ä¸ªè¡Œæƒåˆå¹¶å¤´å¯¸ä¿¡æ¯
+    ///@param error_info æŸ¥è¯¢æŒä»“å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param is_last æ­¤æ¶ˆæ¯å“åº”å‡½æ•°æ˜¯å¦ä¸ºrequest_idè¿™æ¡è¯·æ±‚æ‰€å¯¹åº”çš„æœ€åä¸€ä¸ªå“åº”ï¼Œå½“ä¸ºæœ€åä¸€ä¸ªçš„æ—¶å€™ä¸ºtrueï¼Œå¦‚æœä¸ºfalseï¼Œè¡¨ç¤ºè¿˜æœ‰å…¶ä»–åç»­æ¶ˆæ¯å“åº”
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark ä¸€ä¸ªæŸ¥è¯¢è¯·æ±‚å¯èƒ½å¯¹åº”å¤šä¸ªå“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿ã€‚
+    virtual void
+    OnQueryOptionCombinedExecPosition(XTPQueryOptCombExecPosRsp *position_info, XTPRI *error_info, int request_id,
+                                      bool is_last, uint64_t session_id);
+
+    ///è¯·æ±‚æŸ¥è¯¢å…¶ä»–èŠ‚ç‚¹å¯ç”¨èµ„é‡‘çš„å“åº”ï¼Œéœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    ///@param fund_info æŸ¥è¯¢åˆ°çš„å…¶ä»–èŠ‚ç‚¹å¯ç”¨èµ„é‡‘æƒ…å†µ
+    ///@param error_info æŸ¥è¯¢å…¶ä»–èŠ‚ç‚¹å¯ç”¨èµ„é‡‘å‘ç”Ÿé”™è¯¯æ—¶è¿”å›çš„é”™è¯¯ä¿¡æ¯ï¼Œå½“error_infoä¸ºç©ºï¼Œæˆ–è€…error_info.error_idä¸º0æ—¶ï¼Œè¡¨æ˜æ²¡æœ‰é”™è¯¯
+    ///@param request_id æ­¤æ¶ˆæ¯å“åº”å‡½æ•°å¯¹åº”çš„è¯·æ±‚ID
+    ///@param session_id èµ„é‡‘è´¦æˆ·å¯¹åº”çš„session_idï¼Œç™»å½•æ—¶å¾—åˆ°
+    ///@remark éœ€è¦å¿«é€Ÿè¿”å›ï¼Œå¦åˆ™ä¼šå µå¡åç»­æ¶ˆæ¯ï¼Œå½“å µå¡ä¸¥é‡æ—¶ï¼Œä¼šè§¦å‘æ–­çº¿
+    virtual void
+    OnQueryOtherServerFund(XTPFundQueryRsp *fund_info, XTPRI *error_info, int request_id, uint64_t session_id);
+
+    //-------------------------------------------------------------------------------------
+    //taskï¼šä»»åŠ¡
+    //-------------------------------------------------------------------------------------
+
+    void processTask();
+
+    void processDisconnected(Task *task);
+
+    void processError(Task *task);
+
+    void processOrderEvent(Task *task);
+
+    void processTradeEvent(Task *task);
+
+    void processCancelOrderError(Task *task);
+
+    void processQueryOrder(Task *task);
+
+    void processQueryOrderByPage(Task *task);
+
+    void processQueryTrade(Task *task);
+
+    void processQueryTradeByPage(Task *task);
+
+    void processQueryPosition(Task *task);
+
+    void processQueryAsset(Task *task);
+
+    void processQueryStructuredFund(Task *task);
+
+    void processQueryFundTransfer(Task *task);
+
+    void processFundTransfer(Task *task);
+
+    void processQueryETF(Task *task);
+
+    void processQueryETFBasket(Task *task);
+
+    void processQueryIPOInfoList(Task *task);
+
+    void processQueryIPOQuotaInfo(Task *task);
+
+    void processQueryOptionAuctionInfo(Task *task);
+
+    void processCreditCashRepay(Task *task);
+
+    void processQueryCreditCashRepayInfo(Task *task);
+
+    void processQueryCreditFundInfo(Task *task);
+
+    void processQueryCreditDebtInfo(Task *task);
+
+    void processQueryCreditTickerDebtInfo(Task *task);
+
+    void processQueryCreditAssetDebtInfo(Task *task);
+
+    void processQueryCreditTickerAssignInfo(Task *task);
+
+    void processQueryCreditExcessStock(Task *task);
+
+    void processQueryMulCreditExcessStock(Task *task);
+
+    void processCreditExtendDebtDate(Task *task);
+
+    void processQueryCreditExtendDebtDateOrders(Task *task);
+
+    void processQueryCreditFundExtraInfo(Task *task);
+
+    void processQueryCreditPositionExtraInfo(Task *task);
+
+    void processCreditCashRepayDebtInterestFee(Task *task);
+
+
+    void processOptionCombinedOrderEvent(Task *task);
+
+    void processOptionCombinedTradeEvent(Task *task);
+
+    void processQueryOptionCombinedOrders(Task *task);
+
+    void processQueryOptionCombinedOrdersByPage(Task *task);
+
+    void processQueryOptionCombinedTrades(Task *task);
+
+    void processQueryOptionCombinedTradesByPage(Task *task);
+
+    void processQueryOptionCombinedPosition(Task *task);
+
+    void processQueryOptionCombinedStrategyInfo(Task *task);
+
+    void processCancelOptionCombinedOrderError(Task *task);
+
+    void processQueryOptionCombinedExecPosition(Task *task);
+
+    void processQueryOtherServerFund(Task *task);
+    //-------------------------------------------------------------------------------------
+    //dataï¼šå›è°ƒå‡½æ•°çš„æ•°æ®å­—å…¸
+    //errorï¼šå›è°ƒå‡½æ•°çš„é”™è¯¯å­—å…¸
+    //reqidï¼šè¯·æ±‚id
+    //lastï¼šæ˜¯å¦ä¸ºæœ€åè¿”å›
+    //-------------------------------------------------------------------------------------
+
+    virtual void onDisconnected(uint64_t session, int reason) {};
+
+    virtual void onError(dict data) {};
+
+    virtual void onOrderEvent(dict data, dict error, uint64_t session) {};
+
+    virtual void onTradeEvent(dict data, uint64_t session) {};
+
+    virtual void onCancelOrderError(dict data, dict error, uint64_t session) {};
+
+    virtual void onQueryOrder(dict data, dict error, int reqid, bool last, uint64_t session) {};
+
+    virtual void onQueryTrade(dict data, dict error, int reqid, bool last, uint64_t session) {};
+
+    virtual void onQueryPosition(dict data, dict error, int reqid, bool last, uint64_t session) {};
+
+    virtual void onQueryAsset(dict data, dict error, int reqid, bool last, uint64_t session) {};
+
+    virtual void onQueryStructuredFund(dict data, dict error, int reqid, bool last, uint64_t session) {};
+
+    virtual void onQueryFundTransfer(dict data, dict error, int reqid, bool last, uint64_t session) {};
+
+    virtual void onFundTransfer(dict data, dict error, uint64_t session) {};
+
+    virtual void onQueryETF(dict data, dict error, int reqid, bool last, uint64_t session) {};
+
+    virtual void onQueryETFBasket(dict data, dict error, int reqid, bool last, uint64_t session) {};
+
+    virtual void onQueryIPOInfoList(dict data, dict error, int reqid, bool last, uint64_t session) {};
+
+    virtual void onQueryIPOQuotaInfo(dict data, dict error, int reqid, bool last, uint64_t session) {};
+
+    virtual void onQueryOptionAuctionInfo(dict data, dict error, int reqid, bool last, uint64_t session) {};
+
+    virtual void onCreditCashRepay(dict data, dict error_info, uint64_t session) {};
+
+    virtual void
+    onQueryCreditCashRepayInfo(dict data, dict error_info, int request_id, bool is_last, uint64_t session) {};
+
+    virtual void onQueryCreditFundInfo(dict data, dict error_info, int request_id, uint64_t session) {};
 
-	void processQueryCreditCashRepayInfo(Task *task);
+    virtual void onQueryCreditDebtInfo(dict data, dict error_info, int request_id, bool is_last, uint64_t session) {};
 
-	void processQueryCreditFundInfo(Task *task);
+    virtual void
+    onQueryCreditTickerDebtInfo(dict data, dict error_info, int request_id, bool is_last, uint64_t session) {};
 
-	void processQueryCreditDebtInfo(Task *task);
+    virtual void onQueryCreditAssetDebtInfo(double remain_amount, dict error_info, int request_id, uint64_t session) {};
 
-	void processQueryCreditTickerDebtInfo(Task *task);
+    virtual void
+    onQueryCreditTickerAssignInfo(dict data, dict error_info, int request_id, bool is_last, uint64_t session) {};
 
-	void processQueryCreditAssetDebtInfo(Task *task);
+    virtual void onQueryCreditExcessStock(dict data, dict error_info, int request_id, uint64_t session) {};
 
-	void processQueryCreditTickerAssignInfo(Task *task);
+    virtual void
+    onQueryMulCreditExcessStock(dict data, dict error_info, int request_id, uint64_t session, bool last) {};
 
-	void processQueryCreditExcessStock(Task *task);
+    virtual void onCreditExtendDebtDate(dict data, dict error_info, uint64_t session) {};
 
-	void processQueryMulCreditExcessStock(Task *task);
+    virtual void
+    onQueryCreditExtendDebtDateOrders(dict data, dict error_info, int request_id, bool is_last, uint64_t session) {};
 
-	void processCreditExtendDebtDate(Task *task);
+    virtual void onQueryCreditFundExtraInfo(dict data, dict error_info, int request_id, uint64_t session) {};
 
-	void processQueryCreditExtendDebtDateOrders(Task *task);
+    virtual void
+    onQueryCreditPositionExtraInfo(dict data, dict error_info, int request_id, bool is_last, uint64_t session) {};
 
-	void processQueryCreditFundExtraInfo(Task *task);
+    virtual void
+    onQueryOrderByPage(dict data, int64_t req_count, int64_t order_sequence, int64_t query_reference, int reqid,
+                       bool last, uint64_t session) {};
 
-	void processQueryCreditPositionExtraInfo(Task *task);
+    virtual void
+    onQueryTradeByPage(dict data, int64_t req_count, int64_t trade_sequence, int64_t query_reference, int reqid,
+                       bool last, uint64_t session) {};
 
-	void processCreditCashRepayDebtInterestFee(Task *task);
+    virtual void onCreditCashRepayDebtInterestFee(dict data, dict error_info, uint64_t session) {};
 
 
-	void processOptionCombinedOrderEvent(Task *task);
+    virtual void onOptionCombinedOrderEvent(dict data, dict error_info, uint64_t session_id) {};
 
-	void processOptionCombinedTradeEvent(Task *task);
+    virtual void onOptionCombinedTradeEvent(dict data, uint64_t session_id) {};
 
-	void processQueryOptionCombinedOrders(Task *task);
+    virtual void
+    onQueryOptionCombinedOrders(dict data, dict error_info, int request_id, bool is_last, uint64_t session_id) {};
 
-	void processQueryOptionCombinedOrdersByPage(Task *task);
+    virtual void
+    onQueryOptionCombinedOrdersByPage(dict data, int64_t req_count, int64_t order_sequence, int64_t query_reference,
+                                      int request_id, bool is_last, uint64_t session_id) {};
 
-	void processQueryOptionCombinedTrades(Task *task);
+    virtual void
+    onQueryOptionCombinedTrades(dict data, dict error_info, int request_id, bool is_last, uint64_t session_id) {};
 
-	void processQueryOptionCombinedTradesByPage(Task *task);
+    virtual void
+    onQueryOptionCombinedTradesByPage(dict data, int64_t req_count, int64_t trade_sequence, int64_t query_reference,
+                                      int request_id, bool is_last, uint64_t session_id) {};
 
-	void processQueryOptionCombinedPosition(Task *task);
+    virtual void
+    onQueryOptionCombinedPosition(dict data, dict error_info, int request_id, bool is_last, uint64_t session_id) {};
 
-	void processQueryOptionCombinedStrategyInfo(Task *task);
+    virtual void
+    onQueryOptionCombinedStrategyInfo(dict data, dict error_info, int request_id, bool is_last, uint64_t session_id) {};
 
-	void processCancelOptionCombinedOrderError(Task *task);
+    virtual void onCancelOptionCombinedOrderError(dict data, dict error_info, uint64_t session) {};
 
-	void processQueryOptionCombinedExecPosition(Task *task);
+    virtual void
+    onQueryOptionCombinedExecPosition(dict data, dict error_info, int request_id, bool is_last, uint64_t session) {};
 
-	void processQueryOtherServerFund(Task *task);
-	//-------------------------------------------------------------------------------------
-	//data£º»Øµ÷º¯ÊıµÄÊı¾İ×Öµä
-	//error£º»Øµ÷º¯ÊıµÄ´íÎó×Öµä
-	//reqid£ºÇëÇóid
-	//last£ºÊÇ·ñÎª×îºó·µ»Ø
-	//-------------------------------------------------------------------------------------
+    virtual void onQueryOtherServerFund(dict data, dict error_info, int request_id, uint64_t session) {};
+    //-------------------------------------------------------------------------------------
+    //req:ä¸»åŠ¨å‡½æ•°çš„è¯·æ±‚å­—å…¸
+    //-------------------------------------------------------------------------------------
 
-	virtual void onDisconnected(uint64_t session, int reason) {};
+    void createTraderApi(uint8_t clientid, string path, int log_level);
 
-	virtual void onError(dict data) {};
+    void release();
 
-	virtual void onOrderEvent(dict data, dict error, uint64_t session) {};
+    int exit();
 
-	virtual void onTradeEvent(dict data, uint64_t session) {};
+    string getTradingDay();
 
-	virtual void onCancelOrderError(dict data, dict error, uint64_t session) {};
+    dict getApiLastError();
 
-	virtual void onQueryOrder(dict data, dict error, int reqid, bool last, uint64_t session) {};
+    string getApiVersion();
 
-	virtual void onQueryTrade(dict data, dict error, int reqid, bool last, uint64_t session) {};
+    uint8_t getClientIDByXTPID(uint64_t orderid);
 
-	virtual void onQueryPosition(dict data, dict error, int reqid, bool last, uint64_t session) {};
+    string getAccountByXTPID(uint64_t orderid);
 
-	virtual void onQueryAsset(dict data, dict error, int reqid, bool last, uint64_t session) {};
+    void subscribePublicTopic(int tpye);
 
-	virtual void onQueryStructuredFund(dict data, dict error, int reqid, bool last, uint64_t session) {};
+    void setSoftwareKey(string key);
 
-	virtual void onQueryFundTransfer(dict data, dict error, int reqid, bool last, uint64_t session) {};
+    void setSoftwareVersion(string version);
 
-	virtual void onFundTransfer(dict data, dict error, uint64_t session) {};
+    void setHeartBeatInterval(uint32_t interval);
 
-	virtual void onQueryETF(dict data, dict error, int reqid, bool last, uint64_t session) {};
+    uint64_t login(string ip, int port, string user, string password, int socktype, string local_ip);
 
-	virtual void onQueryETFBasket(dict data, dict error, int reqid, bool last, uint64_t session) {};
+    int logout(uint64_t sessionid);
 
-	virtual void onQueryIPOInfoList(dict data, dict error, int reqid, bool last, uint64_t session) {};
+    uint64_t insertOrder(dict req, uint64_t sessionid);
 
-	virtual void onQueryIPOQuotaInfo(dict data, dict error, int reqid, bool last, uint64_t session) {};
+    uint64_t cancelOrder(uint64_t orderid, uint64_t sessionid);
 
-	virtual void onQueryOptionAuctionInfo(dict data, dict error, int reqid, bool last, uint64_t session) {};
+    int queryOrderByXTPID(uint64_t orderid, uint64_t sessionid, int reqid);
 
-	virtual void onCreditCashRepay(dict data, dict error_info, uint64_t session) {};
+    int queryOrders(dict req, uint64_t sessionid, int reqid);
 
-	virtual void onQueryCreditCashRepayInfo(dict data, dict error_info, int request_id, bool is_last, uint64_t session) {};
+    int queryUnfinishedOrders(uint64_t sessionid, int reqid);
 
-	virtual void onQueryCreditFundInfo(dict data, dict error_info, int request_id, uint64_t session) {};
+    int queryTradesByXTPID(uint64_t orderid, uint64_t sessionid, int reqid);
 
-	virtual void onQueryCreditDebtInfo(dict data, dict error_info, int request_id, bool is_last, uint64_t session) {};
+    int queryTrades(dict req, uint64_t sessionid, int reqid);
 
-	virtual void onQueryCreditTickerDebtInfo(dict data, dict error_info, int request_id, bool is_last, uint64_t session) {};
+    int queryPosition(string ticker, uint64_t sessionid, int reqid);
 
-	virtual void onQueryCreditAssetDebtInfo(double remain_amount, dict error_info, int request_id, uint64_t session) {};
+    int queryAsset(uint64_t sessionid, int reqid);
 
-	virtual void onQueryCreditTickerAssignInfo(dict data, dict error_info, int request_id, bool is_last, uint64_t session) {};
+    int queryStructuredFund(dict req, uint64_t sessionid, int reqid);
 
-	virtual void onQueryCreditExcessStock(dict data, dict error_info, int request_id, uint64_t session) {};
+    uint64_t fundTransfer(dict req, uint64_t sessionid);
 
-	virtual void onQueryMulCreditExcessStock(dict data, dict error_info, int request_id, uint64_t session, bool last) {};
+    int queryFundTransfer(dict req, uint64_t sessionid, int reqid);
 
-	virtual void onCreditExtendDebtDate(dict data, dict error_info, uint64_t session) {};
+    int queryETF(dict req, uint64_t sessionid, int reqid);
 
-	virtual void onQueryCreditExtendDebtDateOrders(dict data, dict error_info, int request_id, bool is_last, uint64_t session) {};
+    int queryETFTickerBasket(dict req, uint64_t sessionid, int reqid);
 
-	virtual void onQueryCreditFundExtraInfo(dict data, dict error_info, int request_id, uint64_t session) {};
+    int queryIPOInfoList(uint64_t sessionid, int reqid);
 
-	virtual void onQueryCreditPositionExtraInfo(dict data, dict error_info, int request_id, bool is_last, uint64_t session) {};
+    int queryIPOQuotaInfo(uint64_t sessionid, int reqid);
 
-	virtual void onQueryOrderByPage(dict data, int64_t req_count, int64_t order_sequence, int64_t query_reference, int reqid, bool last, uint64_t session) {};
+    int queryOptionAuctionInfo(dict req, uint64_t session_id, int request_id);
 
-	virtual void onQueryTradeByPage(dict data, int64_t req_count, int64_t trade_sequence, int64_t query_reference, int reqid, bool last, uint64_t session) {};
-	
-	virtual void onCreditCashRepayDebtInterestFee(dict data, dict error_info, uint64_t session) {};
+    uint64_t creditCashRepay(double amount, uint64_t session_id);
 
+    int queryCreditCashRepayInfo(uint64_t session_id, int request_id);
 
+    int queryCreditFundInfo(uint64_t session_id, int request_id);
 
+    int queryCreditDebtInfo(uint64_t session_id, int request_id);
 
-	virtual void onOptionCombinedOrderEvent(dict data, dict error_info, uint64_t session_id) {};
+    int queryCreditTickerDebtInfo(dict req, uint64_t session_id, int request_id);
 
-	virtual void onOptionCombinedTradeEvent(dict data, uint64_t session_id) {};
+    int queryCreditAssetDebtInfo(uint64_t session_id, int request_id);
 
-	virtual void onQueryOptionCombinedOrders(dict data, dict error_info, int request_id, bool is_last, uint64_t session_id) {};
+    int queryCreditTickerAssignInfo(dict req, uint64_t session_id, int request_id);
 
-	virtual void onQueryOptionCombinedOrdersByPage(dict data, int64_t req_count, int64_t order_sequence, int64_t query_reference, int request_id, bool is_last, uint64_t session_id) {};
+    int queryCreditExcessStock(dict req, uint64_t session_id, int request_id);
 
-	virtual void onQueryOptionCombinedTrades(dict data, dict error_info, int request_id, bool is_last, uint64_t session_id) {};
+    int queryMulCreditExcessStock(dict req, uint64_t session_id, int request_id);
 
-	virtual void onQueryOptionCombinedTradesByPage(dict data, int64_t req_count, int64_t trade_sequence, int64_t query_reference, int request_id, bool is_last, uint64_t session_id) {};
+    uint64_t creditExtendDebtDate(dict req, uint64_t session_id);
 
-	virtual void onQueryOptionCombinedPosition(dict data, dict error_info, int request_id, bool is_last, uint64_t session_id) {};
+    int queryCreditExtendDebtDateOrders(uint64_t xtp_id, uint64_t session_id, int request_id);
 
-	virtual void onQueryOptionCombinedStrategyInfo(dict data, dict error_info, int request_id, bool is_last, uint64_t session_id) {};
+    int queryCreditFundExtraInfo(uint64_t session_id, int request_id);
 
-	virtual void onCancelOptionCombinedOrderError(dict data, dict error_info, uint64_t session) {};
+    int queryCreditPositionExtraInfo(dict req, uint64_t session_id, int request_id);
 
-	virtual void onQueryOptionCombinedExecPosition(dict data, dict error_info, int request_id, bool is_last, uint64_t session) {};
+    int queryOrdersByPage(dict req, uint64_t sessionid, int reqid);
 
-	virtual void onQueryOtherServerFund(dict data, dict error_info, int request_id, uint64_t session) {};
-	//-------------------------------------------------------------------------------------
-	//req:Ö÷¶¯º¯ÊıµÄÇëÇó×Öµä
-	//-------------------------------------------------------------------------------------
+    int queryTradesByPage(dict req, uint64_t sessionid, int reqid);
 
-	void createTraderApi(uint8_t clientid, string path, int log_level);
+    bool isServerRestart(uint64_t session_id);
 
-	void release();
+    uint64_t creditCashRepayDebtInterestFee(string debt_id, double amount, uint64_t session_id);
 
-	int exit();
+    uint64_t creditSellStockRepayDebtInterestFee(dict req, string debt_id, uint64_t session_id);
 
-	string getTradingDay();
+    uint64_t insertOptionCombinedOrder(dict req, uint64_t session_id);
 
-	dict getApiLastError();
+    int queryOptionCombinedUnfinishedOrders(uint64_t session_id, int request_id);
 
-	string getApiVersion();
+    int queryOptionCombinedOrderByXTPID(const uint64_t order_xtp_id, uint64_t session_id, int request_id);
 
-	uint8_t getClientIDByXTPID(uint64_t orderid);
+    int queryOptionCombinedOrders(dict req, uint64_t session_id, int request_id);
 
-	string getAccountByXTPID(uint64_t orderid);
+    int queryOptionCombinedOrdersByPage(dict req, uint64_t session_id, int request_id);
 
-	void subscribePublicTopic(int tpye);
+    int queryOptionCombinedTradesByXTPID(const uint64_t order_xtp_id, uint64_t session_id, int request_id);
 
-	void setSoftwareKey(string key);
+    int queryOptionCombinedTrades(dict req, uint64_t session_id, int request_id);
 
-	void setSoftwareVersion(string version);
+    int queryOptionCombinedTradesByPage(dict req, uint64_t session_id, int request_id);
 
-	void setHeartBeatInterval(uint32_t interval);
+    int queryOptionCombinedPosition(dict req, uint64_t session_id, int request_id);
 
-	uint64_t login(string ip, int port, string user, string password, int socktype,string local_ip);
+    int queryOptionCombinedStrategyInfo(uint64_t session_id, int request_id);
 
-	int logout(uint64_t sessionid);
+    uint64_t cancelOptionCombinedOrder(const uint64_t order_xtp_id, uint64_t session_id);
 
-	uint64_t insertOrder(dict req, uint64_t sessionid);
+    int queryOptionCombinedExecPosition(dict req, uint64_t session_id, int request_id);
 
-	uint64_t cancelOrder(uint64_t orderid, uint64_t sessionid);
-
-	int queryOrderByXTPID(uint64_t orderid, uint64_t sessionid, int reqid);
-
-	int queryOrders(dict req, uint64_t sessionid, int reqid);
-
-	int queryUnfinishedOrders(uint64_t sessionid, int reqid);
-
-	int queryTradesByXTPID(uint64_t orderid, uint64_t sessionid, int reqid);
-
-	int queryTrades(dict req, uint64_t sessionid, int reqid);
-
-	int queryPosition(string ticker, uint64_t sessionid, int reqid);
-
-	int queryAsset(uint64_t sessionid, int reqid);
-
-	int queryStructuredFund(dict req, uint64_t sessionid, int reqid);
-
-	uint64_t fundTransfer(dict req, uint64_t sessionid);
-
-	int queryFundTransfer(dict req, uint64_t sessionid, int reqid);
-
-	int queryETF(dict req, uint64_t sessionid, int reqid);
-
-	int queryETFTickerBasket(dict req, uint64_t sessionid, int reqid);
-
-	int queryIPOInfoList(uint64_t sessionid, int reqid);
-
-	int queryIPOQuotaInfo(uint64_t sessionid, int reqid);
-
-	int queryOptionAuctionInfo(dict req,uint64_t session_id, int request_id);
-
-	uint64_t creditCashRepay(double amount, uint64_t session_id);
-
-	int queryCreditCashRepayInfo(uint64_t session_id, int request_id);
-
-	int queryCreditFundInfo(uint64_t session_id, int request_id);
-
-	int queryCreditDebtInfo(uint64_t session_id, int request_id);
-
-	int queryCreditTickerDebtInfo(dict req, uint64_t session_id, int request_id);
-
-	int queryCreditAssetDebtInfo(uint64_t session_id, int request_id);
-
-	int queryCreditTickerAssignInfo(dict req, uint64_t session_id, int request_id);
-
-	int queryCreditExcessStock(dict req, uint64_t session_id, int request_id);
-
-	int queryMulCreditExcessStock(dict req, uint64_t session_id, int request_id);
-
-	uint64_t creditExtendDebtDate(dict req, uint64_t session_id);
-
-	int queryCreditExtendDebtDateOrders(uint64_t xtp_id,uint64_t session_id, int request_id);
-
-	int queryCreditFundExtraInfo( uint64_t session_id, int request_id);
-
-	int queryCreditPositionExtraInfo(dict req, uint64_t session_id, int request_id);
-
-	int queryOrdersByPage(dict req, uint64_t sessionid, int reqid);
-
-	int queryTradesByPage(dict req, uint64_t sessionid, int reqid);
-
-	bool isServerRestart(uint64_t session_id);
-
-	uint64_t creditCashRepayDebtInterestFee(string debt_id, double amount, uint64_t session_id);
-
-	uint64_t creditSellStockRepayDebtInterestFee(dict req, string debt_id, uint64_t session_id);
-
-	uint64_t insertOptionCombinedOrder(dict req, uint64_t session_id);
-
-	int queryOptionCombinedUnfinishedOrders(uint64_t session_id, int request_id);
-
-	int queryOptionCombinedOrderByXTPID(const uint64_t order_xtp_id, uint64_t session_id, int request_id);
-
-	int queryOptionCombinedOrders(dict req, uint64_t session_id, int request_id);
-
-	int queryOptionCombinedOrdersByPage(dict req, uint64_t session_id, int request_id);
-
-	int queryOptionCombinedTradesByXTPID(const uint64_t order_xtp_id, uint64_t session_id, int request_id);
-
-	int queryOptionCombinedTrades(dict req, uint64_t session_id, int request_id);
-
-	int queryOptionCombinedTradesByPage(dict req, uint64_t session_id, int request_id);
-
-	int queryOptionCombinedPosition(dict req, uint64_t session_id, int request_id);
-
-	int queryOptionCombinedStrategyInfo(uint64_t session_id, int request_id);
-
-	uint64_t cancelOptionCombinedOrder(const uint64_t order_xtp_id, uint64_t session_id);
-
-	int queryOptionCombinedExecPosition(dict req, uint64_t session_id, int request_id);
-
-	int queryOtherServerFund(dict req, uint64_t session_id, int request_id);
+    int queryOtherServerFund(dict req, uint64_t session_id, int request_id);
 };
