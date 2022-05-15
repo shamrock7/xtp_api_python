@@ -1,10 +1,10 @@
-cmake_minimum_required(VERSION 3.23.1)
+cmake_minimum_required(VERSION 3.20)
 project(vn_xtp_api)
 
 # 设置使用的编译器
 set(CMAKE_BUILD_TYPE "Release")
 if (CMAKE_COMPILER_IS_GNUC OR CMAKE_COMPILER_IS_GNUCXX)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -std=c++11")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -std=c++23")
 endif ()
 
 # 设置输出目录
@@ -19,68 +19,48 @@ endif()
 
 # 设置C++ API源文件的所在目录
 set(XTPAPI_PATH )
-if (WIN32)
+message("under apple: " ${CMAKE_SIZEOF_VOID_P})
+if (CMAKE_SIZEOF_VOID_P MATCHES "8")
     set(XTPAPI_PATH xtpapi)
-elseif (UNIX)
-    message("Under unix: " ${CMAKE_SIZEOF_VOID_P})
-    if (CMAKE_SIZEOF_VOID_P MATCHES "8")
-        set(XTPAPI_PATH xtpapi)
-    endif()
 endif()
 
 include_directories(${XTPAPI_PATH})
 
-
+# 链接C++ API库文件
 set(XTPAPI_MD_LIBRARY )
 set(XTPAPI_TD_LIBRARY )
 
-# 链接C++ API库文件
-if (WIN32)
-find_library(XTPAPI_MD_LIBRARY
-	NAMES xtpquoteapi.lib
-	PATHS ${CMAKE_CURRENT_SOURCE_DIR}/xtpapi/)
-find_library(XTPAPI_TD_LIBRARY
-	NAMES xtptraderapi.lib
-	PATHS ${CMAKE_CURRENT_SOURCE_DIR}/xtpapi/)
-elseif (UNIX)
-find_library(XTPAPI_MD_LIBRARY
-  NAMES libxtpquoteapi.so
-  PATHS ${XTPAPI_PATH})
-find_library(XTPAPI_TD_LIBRARY
-  NAMES libxtptraderapi.so
-  PATHS ${XTPAPI_PATH})
-endif()
+IF(APPLE)
+    find_library(XTPAPI_MD_LIBRARY NAMES libxtpquoteapi.dylib PATHS ${XTPAPI_PATH})
+    find_library(XTPAPI_TD_LIBRARY NAMES libxtptraderapi.dylib PATHS ${XTPAPI_PATH})
+ELSEIF(UNIX)
+    find_library(XTPAPI_MD_LIBRARY NAMES libxtpquoteapi.so PATHS ${XTPAPI_PATH})
+    find_library(XTPAPI_TD_LIBRARY NAMES libxtptraderapi.so PATHS ${XTPAPI_PATH})
+ELSEIF(WIN32)
+    find_library(XTPAPI_MD_LIBRARY NAMES libxtpquoteapi.dll PATHS ${XTPAPI_PATH})
+    find_library(XTPAPI_TD_LIBRARY NAMES libxtptraderapi.dll PATHS ${XTPAPI_PATH})
+ENDIF()
+
 
 # 设置Python所在的目录
+# 如果python不是默认安装，请设置python lib 和python include
+set(PYTHON_ROOT /usr/local/apps/homebrew/Cellar/python@3.10/3.10.4/Frameworks/Python.framework/Versions/3.10)
 set(PYTHON_LIBRARY )
-if (WIN32)
-	set(PYTHON_INCLUDE_PATH D:/xtpIDE/Python/Python36-32/include)
-	link_directories(D:/xtpIDE/Python/Python36-32/libs)
-	include_directories(${PYTHON_INCLUDE_PATH})
-elseif(UNIX)
-    # 如果python不是默认安装，请设置python lib 和python include
-    set(PYTHON_LIBRARY /usr/local/apps/homebrew/Cellar/python@3.9/3.9.6/Frameworks/Python.framework/Versions/3.9/lib)
-    set(PYTHON_INCLUDE_PATH /usr/local/apps/homebrew/Cellar/python@3.9/3.9.6/Frameworks/Python.framework/Versions/3.9/include)
+set(PYTHON_LIBRARY ${PYTHON_ROOT}/Python)
+set(PYTHON_INCLUDE_PATH ${PYTHON_ROOT}/include/python3.10)
+include_directories(${PYTHON_INCLUDE_PATH})
 
-	include_directories(${PYTHON_INCLUDE_PATH})
-endif()
 
 # 链接boost库，anaconda /python3用的是python3.6没有用Anaconda
 set(BOOST_ROOT )
-if (WIN32)
-	set(BOOST_ROOT   D:/xtp/soft/boost_1_57_0_python3_32/boost_1_57_0/)
-    set(Boost_USE_STATIC_LIBS        ON)    #链接boost静态库
-	link_directories(D:/xtp/soft/boost_1_57_0_python3_32/boost_1_57_0/stage/lib)
-	include_directories(${BOOST_ROOT})
-elseif(UNIX)
-	set(Boost_USE_MULTITHREADED      ON)
-	# 设置boost安装路径
-	set(BOOST_ROOT /usr/local/apps/homebrew/Cellar/boost/1.76.0)
-    find_package(Boost 1.76.0 COMPONENTS python3 thread date_time system chrono REQUIRED) # 如果boost库没有完全编译，需要将编译的库明确地指出，否者message(${Boost_LIBRARIES})会出错
-	if(Boost_FOUND)
-		include_directories(${Boost_INCLUDE_DIRS})
-	endif()
+set(Boost_USE_MULTITHREADED      ON)
+# 设置boost安装路径
+set(BOOST_ROOT /usr/local/apps/boost/)
+find_package(Boost 1.79.0 COMPONENTS python310 thread date_time system chrono REQUIRED) # 如果boost库没有完全编译，需要将编译的库明确地指出，否者message(${Boost_LIBRARIES})会出错
+if(Boost_FOUND)
+    include_directories(${Boost_INCLUDE_DIRS})
 endif()
+
 
 # 设置编译源文件
 set (vnxtpquote )
@@ -103,8 +83,10 @@ if (BUILD_XTP_TD)
    add_library(vnxtptrader SHARED ${VN_XTP_TD_SOURCE})
 endif()
 
+
 # 去掉生成的so文件名中前缀的lib
 set_target_properties(vnxtpquote PROPERTIES PREFIX "")
+
 
 # 链接生成.so文件
 if (WIN32)

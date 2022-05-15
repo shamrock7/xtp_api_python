@@ -109,15 +109,15 @@ class ConcurrentQueue
 {
 private:
 	queue<Data> the_queue;								//标准库队列
-	mutable mutex the_mutex;							//boost互斥锁
-	condition_variable the_condition_variable;			//boost条件变量
+	mutable boost::mutex the_mutex;							//boost互斥锁
+	boost::condition_variable the_condition_variable;			//boost条件变量
 
 public:
 
 	//存入新的任务
 	void push(Data const& data)
 	{
-		mutex::scoped_lock lock(the_mutex);				//获取互斥锁
+		boost::mutex::scoped_lock lock(the_mutex);				//获取互斥锁
 		the_queue.push(data);							//向队列中存入数据
 		lock.unlock();									//释放锁
 		the_condition_variable.notify_one();			//通知正在阻塞等待的线程
@@ -126,14 +126,14 @@ public:
 	//检查队列是否为空
 	bool empty() const
 	{
-		mutex::scoped_lock lock(the_mutex);
+		boost::mutex::scoped_lock lock(the_mutex);
 		return the_queue.empty();
 	}
 
 	//取出
 	Data wait_and_pop()
 	{
-		mutex::scoped_lock lock(the_mutex);
+        boost::mutex::scoped_lock lock(the_mutex);
 
 		while (the_queue.empty())						//当队列为空时
 		{
@@ -170,14 +170,14 @@ class QuoteApi : public XTP::API::QuoteSpi
 {
 private:
 	XTP::API::QuoteApi* api;			//API对象
-	thread *task_thread;				//工作线程指针（向python中推送数据）
+    boost::thread *task_thread;				//工作线程指针（向python中推送数据）
 	ConcurrentQueue<Task*> task_queue;	//任务队列
 
 public:
 	QuoteApi()
 	{
 		function0<void> f = boost::bind(&QuoteApi::processTask, this);
-		thread t(f);
+        boost::thread t(f);
 		this->task_thread = &t;
 	};
 
