@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(vn_xtp_api)
+project(vn_xtp_api VERSION 2.2.30.7)
 
 # 设置使用的编译器
 set(CMAKE_BUILD_TYPE "Release")
