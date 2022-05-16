@@ -59,6 +59,7 @@ set(BOOST_ROOT /usr/local/apps/boost/)
 find_package(Boost 1.79.0 COMPONENTS python310 thread date_time system chrono REQUIRED) # 如果boost库没有完全编译，需要将编译的库明确地指出，否者message(${Boost_LIBRARIES})会出错
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
+    link_directories(${Boost_LIBRARY_DIRS})
 endif()
 
 
@@ -86,7 +87,6 @@ endif()
 
 # 去掉生成的so文件名中前缀的lib
 set_target_properties(vnxtpquote PROPERTIES PREFIX "")
-
 
 # 链接生成.so文件
 if (WIN32)
