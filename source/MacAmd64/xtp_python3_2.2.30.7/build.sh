@@ -9,6 +9,11 @@ fi
 pushd $BUILDDIR
 cmake ..
 make VERBOSE=1 -j 1
-cp "$(pwd)/lib/vnxtpquote.so" ../
-cp "$(pwd)/lib/vnxtptrader.so" ../
+if [[ "$(uname)" == "Darwin" ]];then
+  cp "$(pwd)/lib/vnxtpquote.dylib" ../
+  cp "$(pwd)/lib/vnxtptrader.dylib" ../
+else
+  cp "$(pwd)/lib/vnxtpquote.so" ../
+  cp "$(pwd)/lib/vnxtptrader.so" ../
+fi
 popd
